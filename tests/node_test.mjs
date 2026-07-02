@@ -134,14 +134,54 @@ assert.equal(uiSource.includes("result.entanglement;"), false, "UIに旧2Q entan
 assert.equal(uiSource.includes("axis_populations.individual"), false, "UIに旧2Q axis keyがない");
 
 // 11. AI interpretation JSON propagation
-assert.equal(gm.result.schema_version, "3q-1.0");
-assert.equal(gm.audit.schema_version, "3q-1.0");
-assert.equal(gm.aiInterpretation.schema_version, "ai_interpretation_3q_v1");
+assert.equal(gm.result.schema_version, "3q-1.1");
+assert.equal(gm.audit.schema_version, "3q-1.1");
+assert.equal(gm.aiInterpretation.schema_version, "ai_interpretation_3q_v2");
 assert.ok(gm.aiInterpretation.entanglement3);
 assert.ok(gm.aiInterpretation.projected_2bit);
 assert.ok(gm.aiInterpretation.gates_summary);
 assert.ok(gm.aiInterpretation.gate_resonance);
 assert.equal(gm.aiInterpretation.ranking_match_top3, false);
 assert.deepEqual(BASIS, ["a0", "a1", "b0", "b1", "c0", "c1", "d0", "d1"]);
+
+// T-F1: NO_OP / SOURCE_EMPTY detection
+const flowCfg = {
+  schema_version: "3q-1.0", mode_profile: "general", initial: "a0", shots: 100, seed: 1,
+  gates: [
+    { name: "g1_normal", source: "a0", target: "b0", theta: 0.9424777961, phi: 0, strength: 3 },
+    { name: "g2_noop", source: "c0", target: "c1", theta: 0.9424777961, phi: 0, strength: 3 },
+    { name: "g3_reversed", source: "d0", target: "b0", theta: 0.6283185307, phi: 0, strength: 2 },
+  ],
+};
+const fm = runFullMeasurement(flowCfg);
+const gf = fm.audit.gate_flow;
+assert.equal(gf[0].flag, "NORMAL", "F1a");
+assert.equal(gf[1].flag, "NO_OP", "F1b");
+assert.equal(gf[2].flag, "SOURCE_EMPTY", "F1c");
+assert.equal(fm.audit.encoding_health, "DEGRADED", "F1d 2件=DEGRADED");
+assert.ok(fm.aiInterpretation.gate_flow, "F1e 伝搬");
+assert.equal(fm.aiInterpretation.encoding_health, "DEGRADED", "F1f");
+
+// T-F2: bundled samples are flow-healthy
+for (const [label, measurement] of [["general", gm], ["seeker", sm]]) {
+  assert.equal(measurement.audit.encoding_health, "HEALTHY", `F2 ${label}`);
+  assert.ok(measurement.audit.gate_flow.every((gate) => gate.flag === "NORMAL"), `F2 ${label} all NORMAL`);
+}
+
+// T-F3: prompt requirements
+for (const prompt of [GENERAL_ENCODER_PROMPT, SEEKER_ENCODER_PROMPT]) {
+  assert.ok(prompt.includes("流れの掟"), "F3 flow rule");
+  assert.ok(prompt.includes("位相の掟"), "F3 phase rule");
+  assert.ok(prompt.includes("flow_check"), "F3 flow check");
+}
+assert.ok(interpretationPrompt.includes("NO_OP"), "F3 NO_OP");
+assert.ok(interpretationPrompt.includes("エンコードの構造上の産物"), "F3 structural artifact");
+assert.ok(interpretationPrompt.includes("0.66 以上の場合のみ"), "F3 calibration");
+
+// T-F4: schema propagation
+assert.equal(fm.result.schema_version, "3q-1.1", "F4 result schema");
+assert.equal(fm.audit.schema_version, "3q-1.1", "F4 audit schema");
+assert.equal(fm.aiInterpretation.schema_version, "ai_interpretation_3q_v2", "F4 AI schema");
+assert.equal(fm.aiInterpretation.sections_present.gate_flow, true, "F4 gate_flow section");
 
 console.log("All 3Q tests passed.");

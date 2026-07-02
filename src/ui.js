@@ -223,9 +223,24 @@ function distributionCard(result) {
   return section;
 }
 
+function encodingHealthWarning(audit) {
+  if (audit.encoding_health === "HEALTHY") return null;
+  const issues = audit.gate_flow.filter((gate) => gate.flag !== "NORMAL");
+  const section = element("section", "notice warning");
+  section.append(element("h3", null, audit.encoding_health === "COMPROMISED"
+    ? "重要: エンコードの流れが大きく損なわれています"
+    : "注意: エンコードの流れに問題があります"));
+  section.append(simpleTable(["ゲート", "判定", "出来事"], issues.map((gate) => [gate.gate, gate.flag, gate.meaning || "入力なし"])));
+  section.append(element("p", null, "これらの出来事は測定に反映されていない(または逆向きに働いた)可能性があります。エンコードをやり直すことを推奨します。"));
+  return section;
+}
+
 function renderResults(measurement) {
   const { result, audit } = measurement;
   output.replaceChildren();
+
+  const healthWarning = encodingHealthWarning(audit);
+  if (healthWarning) output.append(healthWarning);
 
   output.append(resultGuideCard(result), axisGuideCard(result), detailStartCard());
 
@@ -349,14 +364,24 @@ function renderResults(measurement) {
   ));
   output.append(resonance);
 
-  const order = card("K. Order sensitivity");
+  const gateFlow = card("K. Gate flow / 流れの健全性監査");
+  gateFlow.append(
+    element("p", "data-source-note", `encoding_health = ${audit.encoding_health}`),
+    simpleTable(
+      ["gate", "source population before", "target population before", "flag"],
+      audit.gate_flow.map((item) => [item.gate, formatNumber(item.source_population_before, 8), formatNumber(item.target_population_before, 8), item.flag]),
+    ),
+  );
+  output.append(gateFlow);
+
+  const order = card("L. Order sensitivity");
   order.append(simpleTable(
     ["swap steps", "gates", "primary", "secondary", "max probability delta", "sensitivity"],
     audit.order_sensitivity.map((item) => [item.swap_steps.join(" ↔ "), item.swapped_gates.join(" / "), item.primary, item.secondary, formatNumber(item.max_probability_delta, 4), item.sensitivity]),
   ));
   output.append(order);
 
-  const phaseSensitivity = card("L. Phase sensitivity");
+  const phaseSensitivity = card("M. Phase sensitivity");
   phaseSensitivity.append(simpleTable(
     ["gate", "tested phi", "primary", "secondary", "max probability delta", "sensitivity"],
     audit.phase_sensitivity.map((item) => [item.gate, formatNumber(item.tested_phi, 6), item.primary, item.secondary, formatNumber(item.max_probability_delta, 4), item.sensitivity]),
