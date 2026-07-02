@@ -9,8 +9,8 @@ let latest = null;
 let selectedMode = "general";
 
 const MODE_LABELS = {
-  general: "一般ヴァージョン",
-  seeker: "スピリチュアル・神秘主義・求道者ヴァージョン",
+  general: "非スピリチュアル・人生・恋愛モード",
+  seeker: "スピリチュアル・霊的体験・求道者モード",
   legacy: "旧形式（mode_profile 未指定）",
 };
 
@@ -61,8 +61,8 @@ function modeLabel(mode) {
 function updateModeUi(mode) {
   selectedMode = mode === "seeker" ? "seeker" : "general";
   const prompt = getEncoderPrompt(selectedMode);
-  ("#encoding-prompt").textContent = prompt;
-  ("#encoder-copy-button").textContent = `${modeLabel(selectedMode)}のAI変換プロンプトをコピー`;
+  document.querySelector("#encoding-prompt").textContent = prompt;
+  document.querySelector("#encoder-copy-button").textContent = `${modeLabel(selectedMode)}のAI変換プロンプトをコピー`;
   const radio = document.querySelector(`input[name="mode-profile"][value="${selectedMode}"]`);
   if (radio) radio.checked = true;
 }
