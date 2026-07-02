@@ -129,6 +129,9 @@ const srcDir = new URL("../src/", import.meta.url);
 for (const file of await readdir(srcDir)) {
   if (file.endsWith(".js")) assert.equal((await readFile(new URL(file, srcDir), "utf8")).includes("蝶番"), false, `${file} に禁止語`);
 }
+const uiSource = await readFile(new URL("../src/ui.js", import.meta.url), "utf8");
+assert.equal(uiSource.includes("result.entanglement;"), false, "UIに旧2Q entanglement参照がない");
+assert.equal(uiSource.includes("axis_populations.individual"), false, "UIに旧2Q axis keyがない");
 
 // 11. AI interpretation JSON propagation
 assert.equal(gm.result.schema_version, "3q-1.0");
