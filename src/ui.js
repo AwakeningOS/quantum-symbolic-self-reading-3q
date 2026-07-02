@@ -215,10 +215,10 @@ function distributionCard(result) {
     chart.append(row);
   });
   section.append(chart);
-  section.append(simpleTable(["成分", "語", "物語内の意味"], BASIS.map((label) => [
+  section.append(simpleTable(["成分", "語", "定義・意味"], BASIS.map((label) => [
     label,
     result.tensor_structure.component_labels[label],
-    result.component_meanings[label] ?? "入力なし",
+    result.tensor_structure.component_definitions[label],
   ])));
   return section;
 }

@@ -184,4 +184,11 @@ assert.equal(fm.audit.schema_version, "3q-1.1", "F4 audit schema");
 assert.equal(fm.aiInterpretation.schema_version, "ai_interpretation_3q_v2", "F4 AI schema");
 assert.equal(fm.aiInterpretation.sections_present.gate_flow, true, "F4 gate_flow section");
 
+// Distribution metadata and 8-state color classes
+assert.equal(gm.result.tensor_structure.component_definitions.a0, "埋もれた願い・傷・記憶・原点");
+assert.equal(sm.result.tensor_structure.component_definitions.d1, "先から訪れる恩寵・光の体験・召しの出来事");
+const styleSource = await readFile(new URL("../style.css", import.meta.url), "utf8");
+for (const label of BASIS) assert.ok(styleSource.includes(`.bar-${label}`), `bar color ${label}`);
+assert.ok(uiSource.includes("component_definitions[label]"), "distribution uses canonical definitions");
+
 console.log("All 3Q tests passed.");
