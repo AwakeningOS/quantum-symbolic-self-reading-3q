@@ -43,7 +43,7 @@
           <span class="mode-card-body">
             <span class="mode-status">DEFAULT</span>
             <strong>非スピリチュアル・人生・恋愛モード</strong>
-            <span>人生・創作・思想・キャリア・恋愛などを、4つの力「本音・現実・意味・転機」の絡み合いとして読みます。<br></span>出来事の順番、心の葛藤、外から来た変化、まだ言葉になっていない願いまで書くほど、回路は深く反応します。</span>
+            <span>人生・創作・思想・キャリア・恋愛などを、4つの力「本音・現実・意味・転機」の絡み合いとして読み解きます。<br></span>出来事の順番、心の葛藤、想い、外から来た変化、まだ言葉になっていない願い、理想など詳細に書くほど、回路は深く反応します。</span>
             <span class="mode-components">a/b/c/d = 内的核・現実相・背後秩序・顕在作用</span>
           </span>
         </label>
@@ -51,8 +51,8 @@
           <input type="radio" name="mode-profile" value="seeker">
           <span class="mode-card-body">
             <span class="mode-status">SEEKER</span>
-            <strong>スピリチュアル・神秘主義・求道者モード</strong>
-            <span>霊的体験・信仰・祈り・悟り・神秘体験を、魂・現実・真理・恩寵の絡み合いとして読みます。<br></span>体験前の生き方、体験後の心理的と現実的変化、体験の詳細な内容、苦しみ、願い、気づき、きっかけ、神観、信仰、修行、現在の状況などを書くほど、回路は深く反応します。</span>
+            <strong>スピリチュアル・霊的体験・求道者モード</strong>
+            <span>霊的神秘体験・信仰信念体系・思想・霊的プロセスを、魂・現実・真理・恩寵の絡み合いとして読み解きます。<br></span>体験前の生き方、体験後の心理的と現実的変化、体験の詳細な内容、苦しみ、願い、気づき、きっかけ、神観、信仰、修行、現在の状況などを詳細に書くほど、回路は深く反応します。</span>
             <span class="mode-components">a/b/c/d = 魂的個我・顕現した個我・非顕現の神/真理・顕現した神性/恩寵</span>
           </span>
         </label>
@@ -66,17 +66,17 @@
         <article class="step-card">
           <span class="step-number">01</span>
           <h3>分析したい内容を書く</h3>
-          <p>モードを選んだら、「AI変換プロンプト」をコピーして普段自分が使っているAIに貼ってください。貼り付けたプロンプトの最後に、人生・思想・体験・物語を自由に書いてください。</p>
+          <p>モードを選んでから、「AI変換プロンプトをコピー」ボタンを押して、普段自分が使っているAIに貼り付けてください。貼り付けたプロンプトの最後に、人生・思想・体験・物語などを自由に書いてください。</p>
         </article>
         <article class="step-card">
           <span class="step-number">02</span>
-          <h3>AIが出力した結果を入力欄にコピペする</h3>
+          <h3>AIが出力した結果を入力欄に貼る</h3>
           <p>AIが出力した変換結果を、このサイトの入力欄に貼ってください。測定ボタンを押すと、ブラウザ内で量子回路（シミュレーション）が計算します。</p>
         </article>
         <article class="step-card">
           <span class="step-number">03</span>
           <h3>結果と解釈プロンプトをAIに渡し解説してもらう</h3>
-          <p>分析後に「AI解釈プロンプト+結果をコピー」というボタンを押してコピーし、お使いのAIに貼り付けて下さい。AIが分析し解説してくれます。わかりにくい場合はAIに質問しましょう。</p>
+          <p>分析後に「AI解釈プロンプト+結果をコピー」ボタンを押してコピーし、お使いのAIに貼り付けて下さい。AIが分析し解説してくれます。わかりにくい場合はAIに質問しましょう。</p>
         </article>
       </div>
     </section>
@@ -85,7 +85,7 @@
       <p class="section-kicker">STEP 01 · ENCODE</p>
       <div class="section-heading">
         <div><h2>AI変換プロンプト</h2><p>ChatGPT / Claude / Gemini / ローカルLLMなどで使用できます。</p></div>
-        <button class="button secondary" id="encoder-copy-button" type="button" data-copy-prompt="encoding">一般ヴァージョンのAI変換プロンプトをコピー</button>
+        <button class="button secondary" id="encoder-copy-button" type="button" data-copy-prompt="encoding">非スピリチュアル・人生・恋愛モードのAI変換プロンプトをコピー</button>
       </div>
       <details>
         <summary>プロンプト全文を表示</summary>
@@ -95,24 +95,16 @@
 
     <section class="section input-section" id="measurement">
       <p class="section-kicker">STEP 02 · MEASURE</p>
-      <h2>config JSONを貼り付ける</h2>
-      <aside class="measurement-warning" aria-label="config JSONの注意">
-        <strong>注意：config JSON は測定結果ではありません</strong>
-        <p>AIが出した config JSON は、まだ測定結果ではありません。config JSON内の expected_reading は「AIの予想」であり、実測値ではありません。必ずこのサイトで測定してから、result JSON / audit JSON / AI解釈専用JSON をAIに読ませてください。</p>
-      </aside>
+      <h2>AIの変換結果を貼り付ける</h2>
+
       <label class="sr-only" for="config-input">config JSON</label>
       <textarea id="config-input" spellcheck="false" placeholder="ここにAIが出力した config JSON を貼ってください。"></textarea>
       <div id="error-message" class="error" role="alert" tabindex="-1" hidden></div>
       <div class="button-row">
         <button class="button primary" id="measure-button" type="button">測定する</button>
-        <button class="button secondary" id="general-sample-button" type="button">一般版サンプルを読み込む</button>
-        <button class="button secondary" id="seeker-sample-button" type="button">求道者版サンプルを読み込む</button>
         <button class="button ghost" id="clear-button" type="button">入力をクリア</button>
       </div>
-      <aside class="technical-note">
-        <strong>二準位回転について</strong>
-        <p>source → target は意味上の方向を表します。実装はユニタリな二準位回転のため、target側にすでに振幅がある場合は逆向きの移動や干渉も起きます。これはバグではありません。</p>
-      </aside>
+
     </section>
 
     <section class="section results-section" id="results" hidden>
