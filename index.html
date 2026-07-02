@@ -13,7 +13,7 @@
     <div class="shell hero-grid">
       <div>
         <p class="eyebrow">Private · Local · Symbolic</p>
-        <h1>人生・物語<br>量子回路<br>分析システム</span></h1>
+        <h1>人生・物語<br>量子回路<br>分析システム</h1>
         <p class="english-title">Quantum Life & Story Circuit Analysis</p>
         <p class="lead">あなたの人生を、量子回路で分析してみよう！<br><br>本音、現実、意味、転機。<br>4つの力が干渉し、反転し、絡み合いながら、ひとつの物語がどこへ向かうのかを測定します。読むだけでは見えない「構造の動き」を、量子回路でのぞいてみるツールです。</p>
       </div>
@@ -66,7 +66,7 @@
         <article class="step-card">
           <span class="step-number">01</span>
           <h3>分析したい内容を書く</h3>
-          <p>モードを選んでから内容記入欄に記入して下さい。「AI変換プロンプト+記入内容をコピー」ボタンを押して、普段自分が使っているAIに貼り付けてください。人生・思想・体験・物語などを自由に書いて下さい。</p>
+          <p>モードを選んでから内容記入欄に書いてください。「AI変換プロンプト+記入内容をコピー」ボタンを押すと、プロンプトと本文がまとめてコピーされます。それを普段使っているAIに貼り付けてください。</p>
         </article>
         <article class="step-card">
           <span class="step-number">02</span>
@@ -82,27 +82,19 @@
     </section>
 
     <section class="section input-section" id="story-entry">
-      <p class="section-kicker">WRITE YOUR STORY</p>
+      <p class="section-kicker">STEP 01 · WRITE YOUR STORY</p>
       <h2>分析したい内容を入力</h2>
       <p>ここに分析したい人生・物語・思想・体験などを書き込んで下さい。</p>
+      <div class="measurement-warning">
+        <strong>AI変換の品質について</strong>
+        <p>使用するAIの性能によって、物語から回路JSONへ変換する品質が変わります。変換品質は、測定結果とAI解釈の精度に影響します。</p>
+      </div>
       <label class="sr-only" for="story-input">分析したい人生・物語・思想・体験など</label>
       <textarea class="story-input" id="story-input" spellcheck="true" placeholder="ここに分析したい人生・物語・思想・体験などを書き込んで下さい。"></textarea>
       <div class="button-row">
         <button class="button primary" id="copy-encoder-with-story" type="button">非スピリチュアル・人生・恋愛モードのAI変換プロンプト+記入内容をコピー</button>
       </div>
       <p class="data-source-note" id="story-copy-status" aria-live="polite"></p>
-    </section>
-
-    <section class="section prompt-section" id="encoding">
-      <p class="section-kicker">STEP 01 · ENCODE</p>
-      <div class="section-heading">
-        <div><h2>AI変換プロンプト</h2><p>ChatGPT / Claude / Gemini / ローカルLLMなどで使用できます。</p></div>
-        <button class="button secondary" id="encoder-copy-button" type="button" data-copy-prompt="encoding">非スピリチュアル・人生・恋愛モードのAI変換プロンプトをコピー</button>
-      </div>
-      <details>
-        <summary>プロンプト全文を表示</summary>
-        <pre id="encoding-prompt" class="prompt"></pre>
-      </details>
     </section>
 
     <section class="section input-section" id="measurement">
