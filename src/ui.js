@@ -201,7 +201,7 @@ function detailStartCard() {
 
 function distributionCard(result) {
   const section = card("B. 理想確率 / statevector probabilities");
-  section.append(element("p", "data-source-note", "probabilities = statevector から計算した理想確率"));
+  section.append(element("p", "data-source-note", "この回路を最後まで通したあと、8つの成分がどれだけ強く残ったかを示します。棒と数値が大きいほど最終状態で存在感が強い成分です。これは出来事の原因としての影響度ではなく、最終的に残った重みの順位です。"));
   const chart = element("div", "distribution");
   BASIS.forEach((label) => {
     const row = element("div", "bar-row");
@@ -215,9 +215,11 @@ function distributionCard(result) {
     chart.append(row);
   });
   section.append(chart);
-  section.append(simpleTable(["成分", "語", "定義・意味"], BASIS.map((label) => [
+  const rankByLabel = Object.fromEntries(result.observed_ranking_from_probabilities.map((label, index) => [label, index + 1]));
+  section.append(simpleTable(["成分", "語", "順位", "定義・意味"], BASIS.map((label) => [
     label,
     result.tensor_structure.component_labels[label],
+    `${rankByLabel[label]}位`,
     result.tensor_structure.component_definitions[label],
   ])));
   return section;
@@ -245,7 +247,9 @@ function renderResults(measurement) {
   output.append(resultGuideCard(result), axisGuideCard(result), detailStartCard());
 
   const basic = card("A. 基本情報");
-  basic.append(simpleTable(["項目", "値"], [
+  basic.append(
+    element("p", "data-source-note", "測定に使った物語、モード、開始地点、予想順位と実測順位を確認する章です。MATCH/MISMATCH はエンコーダの予想と回路計算が一致したかを示し、不一致そのものも重要な観測です。"),
+    simpleTable(["項目", "値"], [
     ["name", result.name],
     ["description", result.description],
     ["mode", result.mode],
@@ -259,7 +263,8 @@ function renderResults(measurement) {
     ["expected top3 set match", result.ranking_match_top3 === null ? "N/A" : result.ranking_match_top3 ? "MATCH" : "MISMATCH"],
     ["probability source", result.probability_source],
     ["count source", result.count_source],
-  ]));
+    ]),
+  );
   output.append(basic, distributionCard(result));
 
   const entanglement = result.entanglement3;
@@ -272,6 +277,7 @@ function renderResults(measurement) {
   const populations = entanglement.axis_populations;
   const entanglementCard = card("三軸構造");
   entanglementCard.append(
+    element("p", "data-source-note", "主体・顕現・時間の三つの問いが、どれほど切り離せず連動しているかを読みます。軸バランスは左右の合計が1で、大きい側ほど物語の重心が寄っています。Three-tangle が高いほど三軸全体が一つの結び目として連動します。"),
     simpleTable(["指標", "値"], [
       ["Three-tangle (三体タングル)", `${formatNumber(entanglement.three_tangle)} (${entanglement.structure_label})`],
       ["One-tangle (主体軸)", formatNumber(entanglement.one_tangles.subject)],
@@ -286,13 +292,14 @@ function renderResults(measurement) {
 
   const projectedCard = card("時間を畳んだ視点");
   projectedCard.append(
+    element("p", "data-source-note", "過去/未来の区別をいったん外し、a0+a1、b0+b1のように同じ成分族を合算した4成分の俯瞰です。数値が大きいほど、その成分族が時間全体を通して強く残っています。8成分の詳細を、より大づかみに見るための補助表示です。"),
     simpleTable(["成分", "確率"], Object.entries(result.projected_2bit.probabilities).map(([label, value]) => [label, formatNumber(value, 8)])),
-    element("p", "data-source-note", result.projected_2bit.note),
   );
 
   const controls = result.classical_controls;
   const controlsCard = card("古典対照(この回路に量子構造は必要だったか)");
   controlsCard.append(
+    element("p", "data-source-note", "位相を消した場合、または干渉のない古典的な確率移動にした場合と、元の結果がどれだけ違うかを測ります。L1距離が大きいほど、位相や干渉が結末を変えた度合いが大きいと読めます。"),
     simpleTable(["対照", "L1距離", "判定"], [
       ["位相キル (全φ=0)", formatNumber(controls.phase_dependence), controls.phase_dependence_level],
       ["古典マルコフ (干渉なし)", formatNumber(controls.interference_gap), controls.interference_gap_level],
@@ -303,7 +310,7 @@ function renderResults(measurement) {
 
   const counts = card("C. サンプリング結果 / sampled counts");
   counts.append(
-    element("p", "data-source-note", "sampled_counts = shots と seed による疑似サンプリング結果 / sampled_probabilities = sampled_counts ÷ shots"),
+    element("p", "data-source-note", "Bの理想確率を有限回だけ観測したと仮定した疑似実験です。sampled count は各成分が出た回数、sampled probability は回数÷shotsです。理想確率との小さな差は有限回観測による揺らぎであり、通常は物語上の新しい意味を持ちません。"),
     simpleTable(["component", "statevector probability", "sampled count", "sampled probability"], BASIS.map((label) => [
       label,
       formatNumber(result.probabilities[label], 8),
@@ -315,31 +322,31 @@ function renderResults(measurement) {
   output.append(counts);
 
   const statevector = card("D. Final statevector");
-  statevector.append(simpleTable(["成分", "複素振幅"], BASIS.map((label) => {
+  statevector.append(element("p", "data-source-note", "最終状態の計算内部値です。複素振幅の絶対値の二乗がBの確率になり、実部・虚部の向きが干渉に関わります。通常の読み取りではBの確率と後続の診断を見るだけで十分です。"), simpleTable(["成分", "複素振幅"], BASIS.map((label) => {
     const z = result.final_statevector[label];
     return [label, `${formatNumber(z.re, 10)} ${z.im < 0 ? "−" : "+"} ${formatNumber(Math.abs(z.im), 10)} i`];
   })));
   output.append(statevector);
 
   const phaseCard = card("E. Phases");
-  phaseCard.append(simpleTable(["成分", "radians", "degrees"], BASIS.map((label) => [
+  phaseCard.append(element("p", "data-source-note", "各成分が持つ位相角です。確率の大小ではなく、成分同士が出会ったときに強め合うか打ち消し合うかを決めます。単独の角度より、次のRelative phasesで成分間の差を見るのが基本です。"), simpleTable(["成分", "radians", "degrees"], BASIS.map((label) => [
     label, formatNumber(result.phases[label].radians), formatNumber(result.phases[label].degrees, 3),
   ])));
   output.append(phaseCard);
 
   const relative = card("F. Relative phases");
-  relative.append(simpleTable(["組", "radians", "degrees"], Object.entries(result.relative_phases).map(([key, value]) => [
+  relative.append(element("p", "data-source-note", "二成分間の位相差です。0付近は強め合いやすく、±180°付近は打ち消し合いやすく、±90°付近は確率上の干渉が出にくい関係です。振幅がない成分を含む組は実質的な意味を持ちません。"), simpleTable(["組", "radians", "degrees"], Object.entries(result.relative_phases).map(([key, value]) => [
     key, formatNumber(value.radians), formatNumber(value.degrees, 3),
   ])));
   output.append(relative);
 
   const alignment = card("G. Alignment");
-  alignment.append(element("p", "formula", "alignment(i,j) = |amp_i| |amp_j| cos(phase_i − phase_j)"));
+  alignment.append(element("p", "data-source-note", "二成分が現在どれほど同じ向きに揃っているかを、振幅の大きさも含めて示します。正で大きいほど強め合う関係、負で絶対値が大きいほど打ち消し合う関係、0付近は相互作用が弱い状態です。"), element("p", "formula", "alignment(i,j) = |amp_i| |amp_j| cos(phase_i − phase_j)"));
   alignment.append(simpleTable(["組", "alignment"], Object.entries(result.alignment).map(([key, value]) => [key, formatNumber(value, 8)])));
   output.append(alignment);
 
   const trace = card("H. Gate trace");
-  trace.append(simpleTable(
+  trace.append(element("p", "data-source-note", "各出来事を一つずつ適用した直前・直後の確率変化です。deltaのプラスはその成分へ流れ込んだ量、マイナスは流れ出た量を示します。物語がどの順序でどこへ動いたかを追跡できます。"), simpleTable(
     ["step", "gate", ...BASIS.map((x) => `before ${x}`), ...BASIS.map((x) => `after ${x}`), ...BASIS.map((x) => `delta ${x}`)],
     audit.gate_trace.map((item) => [
       item.step, item.gate,
@@ -351,14 +358,14 @@ function renderResults(measurement) {
   output.append(trace);
 
   const ablation = card("I. Ablation");
-  ablation.append(simpleTable(
+  ablation.append(element("p", "data-source-note", "各ゲートを一つだけ取り除いて再測定する反実仮想です。L1 difference が大きいほど、その出来事がなかった場合に結末全体が大きく変わります。分岐点を探すための指標です。"), simpleTable(
     ["removed gate", "primary", "secondary", ...BASIS, "L1 difference"],
     audit.ablation.map((item) => [item.removed_gate, item.primary, item.secondary, ...BASIS.map((x) => formatNumber(item.probabilities[x], 4)), formatNumber(item.l1_difference, 4)]),
   ));
   output.append(ablation);
 
   const resonance = card("J. 共鳴診断");
-  resonance.append(simpleTable(
+  resonance.append(element("p", "data-source-note", "出来事が起きた瞬間の変化と、最終的な反実仮想の重みを比較します。ratio=1が基準で、1より大きいほど後続との干渉で増幅、1より小さいほど後の流れに洗い流されたと読めます。"), simpleTable(
     ["gate", "meaning", "即時L1", "反実仮想重み", "ratio", "判定"],
     audit.gate_resonance.map((item) => [item.gate, item.meaning, formatNumber(item.immediate_effect, 4), formatNumber(item.counterfactual_weight, 4), item.resonance_ratio === null ? "N/A" : formatNumber(item.resonance_ratio, 4), item.resonance_label]),
   ));
@@ -366,7 +373,7 @@ function renderResults(measurement) {
 
   const gateFlow = card("K. Gate flow / 流れの健全性監査");
   gateFlow.append(
-    element("p", "data-source-note", `encoding_health = ${audit.encoding_health}`),
+    element("p", "data-source-note", `各ゲートの適用前にsourceへ流れが届いていたかを確認します。NORMALは意図どおり流れ得る状態、NO_OPは何も起きなかった状態、SOURCE_EMPTYは意図と逆向きに働いた可能性がある状態です。総合判定: ${audit.encoding_health}`),
     simpleTable(
       ["gate", "source population before", "target population before", "flag"],
       audit.gate_flow.map((item) => [item.gate, formatNumber(item.source_population_before, 8), formatNumber(item.target_population_before, 8), item.flag]),
@@ -375,14 +382,14 @@ function renderResults(measurement) {
   output.append(gateFlow);
 
   const order = card("L. Order sensitivity");
-  order.append(simpleTable(
+  order.append(element("p", "data-source-note", "隣り合う二つの出来事の順番を入れ替え、結末がどれだけ変わるかを測ります。HIGHほど順序が重要、LOWほどその順番を入れ替えても着地が安定していると読めます。"), simpleTable(
     ["swap steps", "gates", "primary", "secondary", "max probability delta", "sensitivity"],
     audit.order_sensitivity.map((item) => [item.swap_steps.join(" ↔ "), item.swapped_gates.join(" / "), item.primary, item.secondary, formatNumber(item.max_probability_delta, 4), item.sensitivity]),
   ));
   output.append(order);
 
   const phaseSensitivity = card("M. Phase sensitivity");
-  phaseSensitivity.append(simpleTable(
+  phaseSensitivity.append(element("p", "data-source-note", "各出来事の位相だけを別の通り方に変えた場合の感度です。max probability delta が大きくHIGHであるほど、その出来事を受容・葛藤・反転のどの質で通ったかが結末を左右し得ます。"), simpleTable(
     ["gate", "tested phi", "primary", "secondary", "max probability delta", "sensitivity"],
     audit.phase_sensitivity.map((item) => [item.gate, formatNumber(item.tested_phi, 6), item.primary, item.secondary, formatNumber(item.max_probability_delta, 4), item.sensitivity]),
   ));
