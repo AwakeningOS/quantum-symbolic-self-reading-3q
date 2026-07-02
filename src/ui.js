@@ -21,21 +21,6 @@ const ENCODER_STORY_PLACEHOLDERS = {
   seeker: "【ここにユーザーの人生・思想・体験を書く】",
 };
 
-const COMPONENT_GUIDES = {
-  general: {
-    a: { name: "内奥", axis: "当事 × 潜在", meaning: "まだ形になっていない本音、願い、傷、恐れ、才能、可能性。" },
-    b: { name: "実相", axis: "当事 × 顕在", meaning: "実際の生活、身体、仕事、役割、行動、習慣、いま表に出ている状態。" },
-    c: { name: "底流", axis: "世界 × 潜在", meaning: "本人の背後で働く価値観、社会規範、家族観、時代性、深層パターン。" },
-    d: { name: "契機", axis: "世界 × 顕在", meaning: "外から来た出来事、出会い、喪失、転機、支援、現実の揺さぶり。" },
-  },
-  seeker: {
-    a: { name: "魂的個我", axis: "個我 × 非顕現", meaning: "魂の奥にある願い、祈り、問い、未発現の自己。" },
-    b: { name: "顕現した個我", axis: "個我 × 顕現", meaning: "生活、身体、修行、信仰の実践、現実に生きている自分。" },
-    c: { name: "非顕現の神/真理", axis: "神性 × 非顕現", meaning: "まだ形にならない真理、神観、背後の秩序、沈黙の深み。" },
-    d: { name: "顕現した神性/恩寵", axis: "神性 × 顕現", meaning: "啓示、神秘体験、導き、恩寵、外から訪れた霊的出来事。" },
-  },
-};
-
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -113,7 +98,20 @@ function simpleTable(headers, rows) {
 }
 
 function componentGuide(result) {
-  return COMPONENT_GUIDES[result.mode_profile] ?? COMPONENT_GUIDES.general;
+  const tensor = result.tensor_structure;
+  const subject = [axisDisplayLabel(tensor.subject_axis["0"]), axisDisplayLabel(tensor.subject_axis["1"])];
+  const manifestation = [axisDisplayLabel(tensor.manifestation_axis["0"]), axisDisplayLabel(tensor.manifestation_axis["1"])];
+  const time = [axisDisplayLabel(tensor.time_axis["0"]), axisDisplayLabel(tensor.time_axis["1"])];
+  return Object.fromEntries(BASIS.map((label) => {
+    const subjectBit = ["c", "d"].includes(label[0]) ? 1 : 0;
+    const manifestationBit = ["b", "d"].includes(label[0]) ? 1 : 0;
+    const timeBit = label.endsWith("1") ? 1 : 0;
+    return [label, {
+      name: tensor.component_labels[label],
+      axis: `${subject[subjectBit]} × ${manifestation[manifestationBit]} × ${time[timeBit]}`,
+      meaning: result.component_meanings[label] ?? "入力なし",
+    }];
+  }));
 }
 
 function componentLabel(result, label) {
@@ -130,7 +128,7 @@ function rankingText(result) {
 function resultGuideCard(result) {
   const guide = componentGuide(result);
   const section = card("この測定結果の読み方");
-  section.append(element("p", "data-source-note", "下の数値は、AIが作った回路JSONをブラウザ内で計算した結果です。まずは、どの象徴が強く残ったか、予想と実測がどれだけズレたか、二つの軸がどれだけ絡み合ったかを見ます。"));
+  section.append(element("p", "data-source-note", "下の数値は、AIが作った回路JSONをブラウザ内で計算した結果です。まずは、どの象徴が強く残ったか、予想と実測がどれだけズレたか、三つの軸がどう絡み合ったかを見ます。"));
 
   const observed = result.observed_ranking_from_probabilities ?? [];
   const top = observed[0];
@@ -158,27 +156,40 @@ function resultGuideCard(result) {
 }
 
 function axisGuideCard(result) {
-  const entanglement = result.entanglement;
+  const entanglement = result.entanglement3;
+  const section = card("三つの軸から見る意味");
+  const populations = entanglement?.axis_populations;
+  if (!entanglement || !populations) {
+    section.append(element("p", "data-source-note", "三軸の絡み合い: 入力なし"));
+    return section;
+  }
   const subjectLeft = axisDisplayLabel(result.tensor_structure.subject_axis["0"]);
   const subjectRight = axisDisplayLabel(result.tensor_structure.subject_axis["1"]);
   const manifestationLeft = axisDisplayLabel(result.tensor_structure.manifestation_axis["0"]);
   const manifestationRight = axisDisplayLabel(result.tensor_structure.manifestation_axis["1"]);
-  const section = card("二つの軸から見る意味");
+  const timeLeft = axisDisplayLabel(result.tensor_structure.time_axis["0"]);
+  const timeRight = axisDisplayLabel(result.tensor_structure.time_axis["1"]);
   section.append(simpleTable(["軸", "問い", "今回のバランス", "読み方"], [
     [
       `主体軸 (${subjectLeft} ↔ ${subjectRight})`,
       "これは誰の物語として動いているか",
-      `${subjectLeft} ${formatNumber(entanglement.axis_populations.individual)} / ${subjectRight} ${formatNumber(entanglement.axis_populations.transcendent)}`,
+      `${subjectLeft} ${formatNumber(populations.subject_side)} / ${subjectRight} ${formatNumber(populations.world_side)}`,
       `${subjectLeft}側が強いほど本人・当事者の内側や現実が前に出ます。${subjectRight}側が強いほど社会、家族、時代、神性、出来事など大きな構造が前に出ます。`,
     ],
     [
       `顕現軸 (${manifestationLeft} ↔ ${manifestationRight})`,
       "それは形になっているか、まだ背後にあるか",
-      `${manifestationLeft} ${formatNumber(entanglement.axis_populations.unmanifest)} / ${manifestationRight} ${formatNumber(entanglement.axis_populations.manifest)}`,
+      `${manifestationLeft} ${formatNumber(populations.latent_side)} / ${manifestationRight} ${formatNumber(populations.manifest_side)}`,
       `${manifestationLeft}側が強いほど本音・意味・真理など、まだ形にならない力が前に出ます。${manifestationRight}側が強いほど行動・出来事・現実化した変化が前に出ます。`,
     ],
+    [
+      `時間軸 (${timeLeft} ↔ ${timeRight})`,
+      "物語はいま過去と未来のどちらを向いているか",
+      `${timeLeft} ${formatNumber(populations.past_side)} / ${timeRight} ${formatNumber(populations.future_side)}`,
+      `${timeLeft}側が強いほど来歴・記憶・既に届いた帰結が前に出ます。${timeRight}側が強いほど志向・計画・予兆・召命が前に出ます。`,
+    ],
   ]));
-  section.append(element("p", "data-source-note", `Concurrence は、この二つの軸がどれだけ切り離せないかを見る値です。今回の値は ${formatNumber(entanglement.concurrence)} (${entanglement.entanglement_level}) です。高いほど「本人の問い」と「現実化/出来事の問い」が一体化しています。`));
+  section.append(element("p", "data-source-note", `Three-tangle は三軸が一つの結び目として絡む度合いです。今回の値は ${formatNumber(entanglement.three_tangle)} (${entanglement.structure_label}) です。`));
   return section;
 }
 
