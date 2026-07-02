@@ -61,8 +61,8 @@ function modeLabel(mode) {
 function updateModeUi(mode) {
   selectedMode = mode === "seeker" ? "seeker" : "general";
   const prompt = getEncoderPrompt(selectedMode);
-  document.querySelector("#encoding-prompt").textContent = prompt;
-  document.querySelector("#encoder-copy-button").textContent = `${modeLabel(selectedMode)}のAI変換プロンプトをコピー`;
+  ("#encoding-prompt").textContent = prompt;
+  ("#encoder-copy-button").textContent = `${modeLabel(selectedMode)}のAI変換プロンプトをコピー`;
   const radio = document.querySelector(`input[name="mode-profile"][value="${selectedMode}"]`);
   if (radio) radio.checked = true;
 }
@@ -288,9 +288,6 @@ async function loadSample(path, mode) {
     showError(error);
   }
 }
-
-document.querySelector("#general-sample-button").addEventListener("click", () => loadSample("./examples/midlife_reboot_general_v0.json", "general"));
-document.querySelector("#seeker-sample-button").addEventListener("click", () => loadSample("./examples/user_spiritual_evolution_light_descent_v0.json", "seeker"));
 
 document.querySelector("#clear-button").addEventListener("click", () => {
   input.value = "";
