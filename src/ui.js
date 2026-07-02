@@ -220,12 +220,7 @@ function renderResults(measurement) {
 
   const notice = element("div", "notice warning");
   notice.append(element("strong", null, "注意書き"), element("p", null, "この結果は、霊的真実・医学的事実・人生の絶対診断を証明するものではありません。AIが作った象徴的な回路設定を、数学的に展開した結果です。自己理解・内省・物語の整理のために使ってください。医療・宗教・人生判断の絶対的根拠にはしないでください。"));
-  const aiWarning = element("div", "notice hallucination-warning");
-  aiWarning.append(
-    element("strong", null, "AIへ渡すデータを確認してください"),
-    element("p", null, "AIに解釈させる場合は、config JSONではなく、このサイトが出力した result JSON / audit JSON / AI解釈専用JSON を貼ってください。AIが入力にない確率・counts・順位・ゲート影響を作った場合、その解釈は破棄してください。"),
-  );
-  output.append(notice, aiWarning);
+  output.append(notice);
   resultSection.hidden = false;
   resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
