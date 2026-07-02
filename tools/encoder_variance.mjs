@@ -73,7 +73,7 @@ for (const result of measurements) {
   rankingCounts.set(key, (rankingCounts.get(key) ?? 0) + 1);
 }
 const modalEntry = [...rankingCounts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0];
-const concurrenceValues = measurements.map((result) => result.entanglement.concurrence);
+const threeTangleValues = measurements.map((result) => result.entanglement3.three_tangle);
 const pairwiseDistances = [];
 for (let i = 0; i < measurements.length; i += 1) {
   for (let j = i + 1; j < measurements.length; j += 1) {
@@ -88,10 +88,10 @@ const summary = {
     modal_ranking: modalEntry ? modalEntry[0].split(">") : [],
     agreement_rate: modalEntry ? modalEntry[1] / configs.length : 0,
   },
-  concurrence: {
-    mean: concurrenceValues.length ? mean(concurrenceValues) : null,
-    std: sampleStd(concurrenceValues),
-    values: concurrenceValues,
+  three_tangle: {
+    mean: threeTangleValues.length ? mean(threeTangleValues) : null,
+    std: sampleStd(threeTangleValues),
+    values: threeTangleValues,
   },
   probability_l1_spread: {
     max_pairwise_l1: maxPairwiseL1,

@@ -14,7 +14,6 @@ let selectedMode = "general";
 const MODE_LABELS = {
   general: "非スピリチュアル・人生・恋愛モード",
   seeker: "スピリチュアル・霊的体験・求道者モード",
-  legacy: "旧形式（mode_profile 未指定）",
 };
 
 const ENCODER_STORY_PLACEHOLDERS = {
@@ -195,7 +194,8 @@ function distributionCard(result) {
   const chart = element("div", "distribution");
   BASIS.forEach((label) => {
     const row = element("div", "bar-row");
-    row.append(element("strong", "bar-label", label));
+    const word = result.tensor_structure.component_labels[label];
+    row.append(element("strong", "bar-label", `${label} ${word}`));
     const track = element("div", "bar-track");
     const fill = element("div", `bar-fill bar-${label}`);
     fill.style.width = `${Math.max(0, Math.min(100, result.probabilities[label] * 100))}%`;
@@ -204,6 +204,11 @@ function distributionCard(result) {
     chart.append(row);
   });
   section.append(chart);
+  section.append(simpleTable(["成分", "語", "物語内の意味"], BASIS.map((label) => [
+    label,
+    result.tensor_structure.component_labels[label],
+    result.component_meanings[label] ?? "入力なし",
+  ])));
   return section;
 }
 
@@ -225,26 +230,38 @@ function renderResults(measurement) {
     ["observed ranking / counts", result.observed_ranking_from_counts?.join(" > ") ?? "入力なし"],
     ["expected match / probabilities", result.ranking_match_expected_from_probabilities === null ? "N/A" : result.ranking_match_expected_from_probabilities ? "MATCH" : "MISMATCH"],
     ["expected match / counts", result.ranking_match_expected_from_counts === null ? "N/A" : result.ranking_match_expected_from_counts ? "MATCH" : "MISMATCH"],
+    ["expected top3 set match", result.ranking_match_top3 === null ? "N/A" : result.ranking_match_top3 ? "MATCH" : "MISMATCH"],
     ["probability source", result.probability_source],
     ["count source", result.count_source],
   ]));
   output.append(basic, distributionCard(result));
 
-  const entanglement = result.entanglement;
+  const entanglement = result.entanglement3;
   const subjectLeft = axisDisplayLabel(result.tensor_structure.subject_axis["0"]);
   const subjectRight = axisDisplayLabel(result.tensor_structure.subject_axis["1"]);
   const manifestationLeft = axisDisplayLabel(result.tensor_structure.manifestation_axis["0"]);
   const manifestationRight = axisDisplayLabel(result.tensor_structure.manifestation_axis["1"]);
-  const entanglementCard = card("二軸構造とエンタングルメント");
+  const timeLeft = axisDisplayLabel(result.tensor_structure.time_axis["0"]);
+  const timeRight = axisDisplayLabel(result.tensor_structure.time_axis["1"]);
+  const populations = entanglement.axis_populations;
+  const entanglementCard = card("三軸構造");
   entanglementCard.append(
     simpleTable(["指標", "値"], [
-      ["Concurrence (絡み合い度)", `${formatNumber(entanglement.concurrence)} (${entanglement.entanglement_level})`],
-      ["エンタングルメントエントロピー", `${formatNumber(entanglement.entanglement_entropy_bits)} bit`],
-      ["Purity (主体軸)", formatNumber(entanglement.purity.subject_axis)],
-      [`主体軸バランス (${subjectLeft} ↔ ${subjectRight})`, `${subjectLeft} ${formatNumber(entanglement.axis_populations.individual)} / ${subjectRight} ${formatNumber(entanglement.axis_populations.transcendent)}`],
-      [`顕現軸バランス (${manifestationLeft} ↔ ${manifestationRight})`, `${manifestationLeft} ${formatNumber(entanglement.axis_populations.unmanifest)} / ${manifestationRight} ${formatNumber(entanglement.axis_populations.manifest)}`],
+      ["Three-tangle (三体タングル)", `${formatNumber(entanglement.three_tangle)} (${entanglement.structure_label})`],
+      ["One-tangle (主体軸)", formatNumber(entanglement.one_tangles.subject)],
+      ["One-tangle (顕現軸)", formatNumber(entanglement.one_tangles.manifestation)],
+      ["One-tangle (時間軸)", formatNumber(entanglement.one_tangles.time)],
+      [`主体軸 (${subjectLeft} ↔ ${subjectRight})`, `${subjectLeft} ${formatNumber(populations.subject_side)} / ${subjectRight} ${formatNumber(populations.world_side)}`],
+      [`顕現軸 (${manifestationLeft} ↔ ${manifestationRight})`, `${manifestationLeft} ${formatNumber(populations.latent_side)} / ${manifestationRight} ${formatNumber(populations.manifest_side)}`],
+      [`時間軸 (${timeLeft} ↔ ${timeRight})`, `${timeLeft} ${formatNumber(populations.past_side)} / ${timeRight} ${formatNumber(populations.future_side)}`],
     ]),
-    element("p", "data-source-note", `Concurrence は『主体軸(${subjectLeft}/${subjectRight})の問い』と『顕現軸(${manifestationLeft}/${manifestationRight})の問い』がどれだけ不可分に絡み合っているかを示します。0 = 二つの問いは独立、1 = 最大の絡み合い。`),
+    element("p", "data-source-note", "GHZ_KNOT は三つの問いが一つの結び目、W_WEAVE は対ごとの綾、HYBRID は両者の混合、SEPARABLE_LIKE はほぼ独立した構造です。"),
+  );
+
+  const projectedCard = card("時間を畳んだ視点");
+  projectedCard.append(
+    simpleTable(["成分", "確率"], Object.entries(result.projected_2bit.probabilities).map(([label, value]) => [label, formatNumber(value, 8)])),
+    element("p", "data-source-note", result.projected_2bit.note),
   );
 
   const controls = result.classical_controls;
@@ -256,7 +273,7 @@ function renderResults(measurement) {
     ]),
     element("p", "data-source-note", "両方が LOW の場合、この config の結果は古典的な確率遷移でほぼ再現でき、位相・干渉は結果に寄与していません。"),
   );
-  output.append(entanglementCard, controlsCard);
+  output.append(entanglementCard, projectedCard, controlsCard);
 
   const counts = card("C. サンプリング結果 / sampled counts");
   counts.append(
@@ -314,14 +331,21 @@ function renderResults(measurement) {
   ));
   output.append(ablation);
 
-  const order = card("J. Order sensitivity");
+  const resonance = card("J. 共鳴診断");
+  resonance.append(simpleTable(
+    ["gate", "meaning", "即時L1", "反実仮想重み", "ratio", "判定"],
+    audit.gate_resonance.map((item) => [item.gate, item.meaning, formatNumber(item.immediate_effect, 4), formatNumber(item.counterfactual_weight, 4), item.resonance_ratio === null ? "N/A" : formatNumber(item.resonance_ratio, 4), item.resonance_label]),
+  ));
+  output.append(resonance);
+
+  const order = card("K. Order sensitivity");
   order.append(simpleTable(
     ["swap steps", "gates", "primary", "secondary", "max probability delta", "sensitivity"],
     audit.order_sensitivity.map((item) => [item.swap_steps.join(" ↔ "), item.swapped_gates.join(" / "), item.primary, item.secondary, formatNumber(item.max_probability_delta, 4), item.sensitivity]),
   ));
   output.append(order);
 
-  const phaseSensitivity = card("K. Phase sensitivity");
+  const phaseSensitivity = card("L. Phase sensitivity");
   phaseSensitivity.append(simpleTable(
     ["gate", "tested phi", "primary", "secondary", "max probability delta", "sensitivity"],
     audit.phase_sensitivity.map((item) => [item.gate, formatNumber(item.tested_phi, 6), item.primary, item.secondary, formatNumber(item.max_probability_delta, 4), item.sensitivity]),
@@ -367,6 +391,19 @@ function downloadJson(data, filename) {
   URL.revokeObjectURL(url);
 }
 
+async function loadSample(path, mode) {
+  clearError();
+  try {
+    const response = await fetch(path);
+    if (!response.ok) throw new Error(`サンプルを読み込めませんでした (${response.status})`);
+    input.value = JSON.stringify(await response.json(), null, 2);
+    updateModeUi(mode);
+    input.focus();
+  } catch (error) {
+    showError(error);
+  }
+}
+
 updateModeUi("general");
 document.querySelector("#interpretation-prompt").textContent = interpretationPrompt;
 
@@ -404,6 +441,9 @@ document.querySelector("#clear-button").addEventListener("click", () => {
   clearError();
   input.focus();
 });
+
+document.querySelector("#general-sample-button").addEventListener("click", () => loadSample("./examples/woodworker45_time_v0.json", "general"));
+document.querySelector("#seeker-sample-button").addEventListener("click", () => loadSample("./examples/light_descent_time_v0.json", "seeker"));
 
 document.querySelectorAll("[data-copy-prompt]").forEach((button) => {
   button.addEventListener("click", () => copyText(button.dataset.copyPrompt === "encoding" ? getEncoderPrompt(selectedMode) : interpretationPrompt, button));
