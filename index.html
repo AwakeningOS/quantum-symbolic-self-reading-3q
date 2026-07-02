@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="人生・思想・霊的体験を3量子ビット・8状態の象徴回路としてブラウザ内で測定する実験的ツール。">
   <meta name="theme-color" content="#101629">
-  <title>Quantum Symbolic Self-Reading 3Q</title>
+  <title>Quantum Life & Story Circuit Analysis 3Q</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -13,9 +13,9 @@
     <div class="shell hero-grid">
       <div>
         <p class="eyebrow">Private · Local · Symbolic</p>
-        <h1>人生・物語<br>3量子ビット<br>分析システム</h1>
-        <p class="english-title">Quantum Symbolic Self-Reading 3Q</p>
-        <p class="lead">当事と世界、潜在と顕在、過去と未来。<br>3つの軸と8つの成分が干渉し、反転し、絡み合う物語の構造を測定します。</p>
+        <h1>人生・物語<br>3量子ビット回路<br>分析システム</h1>
+        <p class="english-title">Quantum Life & Story Circuit Analysis 3Q</p>
+        <p class="lead">当事と世界、潜在と顕在、過去と未来。<br>3つの軸と8つの成分が干渉し、反転し、絡み合う物語の構造を量子回路（シミュレーション）で計算し測定します。</p>
       </div>
       <div class="orb" aria-hidden="true"><span>a0</span><span>b1</span><span>c0</span><span>d1</span></div>
     </div>
@@ -43,7 +43,7 @@
           <span class="mode-card-body">
             <span class="mode-status">DEFAULT</span>
             <strong>非スピリチュアル・人生・恋愛モード</strong>
-            <span>人生・創作・思想・キャリア・恋愛などを、当事/世界・潜在/顕在・過去/未来の3軸で読みます。</span>
+            <span>人生・創作・思想・キャリア・恋愛などを、当事/世界・潜在/顕在・過去/未来の3軸で読みます。<br>出来事はできるだけ時系列で書いてください。昔から続いている傷・習慣・価値観、これから向かいたい願い、実際に起きた出来事、まだ形になっていない本音を書くほど、回路の精度が上がります。特に「過去から未来へ向き直った瞬間」や「外からの出来事が本音と噛み合った瞬間」が重要です。</span>
             <span class="mode-components">a0〜d1 = 淵源・志向・来歴・企図・慣性・胎動・帰結・予兆</span>
           </span>
         </label>
@@ -52,7 +52,7 @@
           <span class="mode-card-body">
             <span class="mode-status">SEEKER</span>
             <strong>スピリチュアル・霊的体験・求道者モード</strong>
-            <span>霊的体験・信仰・求道の過程を、個我/超越・非顕現/顕現・過去/未来の3軸で読みます。</span>
+            <span>霊的体験・信仰・求道の過程を、個我/超越・非顕現/顕現・過去/未来の3軸で読みます。<br>体験前の生き方、体験後の心理的・現実的変化、体験の内容、苦しみ、願い、気づき、きっかけ、神観、信仰、修行、現在の状況に加えて、「以前から抱えていた渇きや傷」「どこへ呼ばれている感覚があるか」「教え・師・本・祈りとの出会い」「光や啓示の体験が現実生活にどう降りたか」を書くほど、量子回路は深く反応します。特に、宿縁が召命へ変わった瞬間、恩寵の体験が新しい生き方へつながった瞬間を書いてください。</span>
             <span class="mode-components">a0〜d1 = 宿縁・召命・遍歴・新生・伝灯・黎明・加護・来迎</span>
           </span>
         </label>
@@ -100,7 +100,27 @@
         <p>使用するAIの性能によって、記入内容を量子回路用JSONへ変換する精度と結果の解釈・解説の品質が変わります。</p>
       </div>
       <label class="sr-only" for="story-input">分析したい人生・物語・思想・体験など</label>
-      <textarea class="story-input" id="story-input" spellcheck="true" placeholder="ここに分析したい人生・物語・思想・体験などを書き込んで下さい。"></textarea>
+      <textarea class="story-input" id="story-input" spellcheck="true" placeholder="ここに分析したい人生・物語・思想・体験などを書き込んで下さい。
+
+書くとよいこと：
+・出来事の順番
+・昔から続いている傷、習慣、価値観
+・今の現実、仕事、恋愛、家族、身体の状態
+・外から来た出来事、出会い、喪失、チャンス
+・まだ形になっていない本音や願い
+・これから向かいたい理想
+・過去から未来へ向き直った瞬間
+・複数の出来事や感情が一つに重なった場面
+
+霊的体験の場合：
+・体験前の生き方
+・苦しみ、渇き、祈り
+・教え、師、本、宗教、修行との出会い
+・光や啓示、神秘体験の内容
+・体験中の恐れ、安心、抵抗、受容
+・体験後の日常への戻り方
+・信仰や神観の変化
+・現在の生活、修行、迷い"></textarea>
       <div class="button-row">
         <button class="button primary" id="copy-encoder-with-story" type="button">非スピリチュアル・人生・恋愛モードのAI変換用プロンプト+記入内容をコピー</button>
       </div>
