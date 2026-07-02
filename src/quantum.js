@@ -1,15 +1,17 @@
-export const BASIS = ["a", "b", "c", "d"];
+export const BASIS = ["a0", "a1", "b0", "b1", "c0", "c1", "d0", "d1"];
 
 export const AXIS_LABELS = {
   general: {
-    subject_axis: { "0": "当事 (a,b)", "1": "世界 (c,d)" },
-    manifestation_axis: { "0": "潜在 (a,c)", "1": "顕在 (b,d)" },
-    components: { a: "内奥", b: "実相", c: "底流", d: "契機" },
+    subject_axis: { "0": "当事 (a0,a1,b0,b1)", "1": "世界 (c0,c1,d0,d1)" },
+    manifestation_axis: { "0": "潜在 (a0,a1,c0,c1)", "1": "顕在 (b0,b1,d0,d1)" },
+    time_axis: { "0": "過去 (a0,b0,c0,d0)", "1": "未来 (a1,b1,c1,d1)" },
+    components: { a0: "淵源", a1: "志向", b0: "来歴", b1: "企図", c0: "慣性", c1: "胎動", d0: "帰結", d1: "予兆" },
   },
   seeker: {
-    subject_axis: { "0": "個我 (a,b)", "1": "超越 (c,d)" },
-    manifestation_axis: { "0": "非顕現 (a,c)", "1": "顕現 (b,d)" },
-    components: { a: "魂的個我", b: "顕現した個我", c: "非顕現の真理", d: "顕現した神性" },
+    subject_axis: { "0": "個我 (a0,a1,b0,b1)", "1": "超越 (c0,c1,d0,d1)" },
+    manifestation_axis: { "0": "非顕現 (a0,a1,c0,c1)", "1": "顕現 (b0,b1,d0,d1)" },
+    time_axis: { "0": "過去 (a0,b0,c0,d0)", "1": "未来 (a1,b1,c1,d1)" },
+    components: { a0: "宿縁", a1: "召命", b0: "遍歴", b1: "新生", c0: "伝灯", c1: "黎明", d0: "加護", d1: "来迎" },
   },
 };
 
@@ -31,14 +33,14 @@ export function basisIndex(label) {
 
 export function initialState(label) {
   const index = basisIndex(label);
-  if (index < 0) throw new Error("initial は a/b/c/d のいずれかにしてください。");
+  if (index < 0) throw new Error("initial は a0/a1/b0/b1/c0/c1/d0/d1 のいずれかにしてください。");
   return BASIS.map((_, i) => complex(i === index ? 1 : 0, 0));
 }
 
 export function pairRotation(state, source, target, theta, phi) {
   const i = basisIndex(source);
   const j = basisIndex(target);
-  if (i < 0 || j < 0) throw new Error("gate の source/target は a/b/c/d のいずれかにしてください。");
+  if (i < 0 || j < 0) throw new Error("gate の source/target は3ビット基底ラベルにしてください。");
   if (i === j) throw new Error("gate の source と target は異なる成分にしてください。");
   const next = state.map((z) => complex(z.re, z.im));
   const c = Math.cos(theta);
@@ -144,7 +146,7 @@ export function traceGateEffects(startState, gates) {
       target: gate.target,
       before,
       after,
-      concurrence_after: concurrence(state),
+      three_tangle_after: threeTangle(state),
       delta: Object.fromEntries(BASIS.map((label) => [label, after[label] - before[label]])),
     });
   });
@@ -174,6 +176,12 @@ function rankingMatchesExpected(observed, expected) {
     : null;
 }
 
+function top3SetMatches(observed, expected) {
+  if (expected.length < 3) return null;
+  const expectedTop3 = new Set(expected.slice(0, 3));
+  return observed.slice(0, 3).every((label) => expectedTop3.has(label));
+}
+
 function probabilitiesFromCounts(counts, shots) {
   if (!counts || !Number.isInteger(shots) || shots <= 0) return null;
   return Object.fromEntries(BASIS.map((label) => [label, counts[label] / shots]));
@@ -199,7 +207,7 @@ export function runGateAblation(config) {
       primary: measured.primary,
       secondary: measured.secondary,
       probabilities: measured.probabilities,
-      concurrence: concurrence(measured.state),
+      three_tangle: threeTangle(measured.state),
       l1_difference: l1Difference,
     };
   });
@@ -247,15 +255,25 @@ export function runPhaseSensitivity(config) {
 
 export function validateConfig(config) {
   if (!config || typeof config !== "object" || Array.isArray(config)) throw new Error("config はJSONオブジェクトにしてください。");
-  if (basisIndex(config.initial) < 0) throw new Error("initial は a/b/c/d のいずれかにしてください。");
+  const legacyLabels = new Set(["a", "b", "c", "d"]);
+  const labels = [config.initial, ...(config.gates ?? []).flatMap((gate) => [gate.source, gate.target])];
+  if (labels.some((label) => legacyLabels.has(label))) throw new Error("この config は2ビット形式です。このリポジトリは3ビット専用です。");
+  if (basisIndex(config.initial) < 0) throw new Error("initial は3ビット基底ラベルにしてください。");
   if (!Array.isArray(config.gates) || config.gates.length === 0) throw new Error("gates が空です。");
   if (config.shots !== undefined && (!Number.isInteger(config.shots) || config.shots <= 0)) throw new Error("shots は正の整数にしてください。");
   if (config.seed !== undefined && !Number.isInteger(config.seed)) throw new Error("seed は整数にしてください。");
   config.gates.forEach((gate, index) => {
-    if (basisIndex(gate.source) < 0 || basisIndex(gate.target) < 0) throw new Error(`gate ${index + 1} の source/target は a/b/c/d のいずれかにしてください。`);
+    if (basisIndex(gate.source) < 0 || basisIndex(gate.target) < 0) throw new Error(`gate ${index + 1} の source/target は3ビット基底ラベルにしてください。`);
     if (gate.source === gate.target) throw new Error(`gate ${index + 1} の source と target は異なる成分にしてください。`);
     if (![gate.theta, gate.phi, gate.strength].every(Number.isFinite)) throw new Error(`gate ${index + 1} の theta/phi/strength は数値にしてください。`);
   });
+  const ranking = config.expected_reading?.ranking;
+  if (ranking !== undefined && (!Array.isArray(ranking) || ranking.length !== BASIS.length || new Set(ranking).size !== BASIS.length || ranking.some((label) => basisIndex(label) < 0))) {
+    throw new Error("expected_reading.ranking は8ラベルの全順位にしてください。");
+  }
+  if (config.component_meanings !== undefined && (typeof config.component_meanings !== "object" || BASIS.some((label) => typeof config.component_meanings[label] !== "string"))) {
+    throw new Error("component_meanings は8ラベル全ての文字列を含めてください。");
+  }
   return true;
 }
 
@@ -272,7 +290,7 @@ export function makeAiInterpretationJson(result, audit = {}) {
   );
   return {
     input_type: "measurement_result",
-    schema_version: "ai_interpretation_v4",
+    schema_version: "ai_interpretation_3q_v1",
     name: result.name,
     description: result.description,
     mode_profile: result.mode_profile,
@@ -283,7 +301,8 @@ export function makeAiInterpretationJson(result, audit = {}) {
     gates_summary: result.gates_summary,
     gate_resonance: Array.isArray(audit.gate_resonance) ? audit.gate_resonance : null,
     tensor_structure: result.tensor_structure,
-    entanglement: result.entanglement,
+    entanglement3: result.entanglement3,
+    projected_2bit: result.projected_2bit,
     classical_controls: result.classical_controls,
     probability_source: result.probability_source,
     count_source: result.count_source,
@@ -297,6 +316,7 @@ export function makeAiInterpretationJson(result, audit = {}) {
     expected_ranking: result.expected_ranking,
     ranking_match_expected_from_probabilities: result.ranking_match_expected_from_probabilities,
     ranking_match_expected_from_counts: result.ranking_match_expected_from_counts,
+    ranking_match_top3: result.ranking_match_top3,
     sections_present: sectionsPresent,
     ...Object.fromEntries(Object.entries(diagnosticSections).filter(([, value]) => value !== null)),
     anti_hallucination_instructions: [
@@ -305,8 +325,8 @@ export function makeAiInterpretationJson(result, audit = {}) {
       "expected_ranking is a hypothesis, not an observed result.",
       "probabilities and sampled_probabilities are different fields.",
       "If a section is absent, say 入力なし.",
-      "concurrence, purity, entropy, bloch_z, phase_dependence, interference_gap はサイトが計算した値である。存在しない値を推定・補完しない。",
-      "entanglement_level と phase_dependence_level / interference_gap_level はサイトの閾値判定であり、AIが独自の閾値で再判定しない。",
+      "three_tangle / pairwise_tangles / one_tangles / structure_label / projected_2bit はサイトが計算した値である。再計算・再分類しない。",
+      "phase_dependence_level / interference_gap_level はサイトの閾値判定であり、AIが独自の閾値で再判定しない。",
       "phase_dependence と interference_gap が両方 LOW の場合、『この物語の量子的構造(位相・干渉)は結果に寄与していない』と明示的に述べること。",
       "gate_resonance の resonance_label と resonance_ratio はサイトが計算した値である。AIが即時効果と反実仮想重みから独自にラベルを再判定しない。",
       "gates_summary の meaning と phi_label はエンコーダとサイトが付与した意味情報である。存在しないゲートや意味を創作しない。",
@@ -315,82 +335,112 @@ export function makeAiInterpretationJson(result, audit = {}) {
   };
 }
 
-export function concurrence(state) {
-  const det = sub(mul(state[0], state[3]), mul(state[1], state[2]));
-  return Math.min(1, 2 * Math.sqrt(abs2(det)));
+function bitOf(index, q) {
+  return q === 0 ? (index >> 2) & 1 : q === 1 ? (index >> 1) & 1 : index & 1;
 }
 
-export function reducedDensityMatrix(state, axis) {
+export function reducedDensity1of3(state, q) {
+  const mask = q === 0 ? 4 : q === 1 ? 2 : 1;
   const rho = [[complex(), complex()], [complex(), complex()]];
-  for (let x = 0; x < 2; x += 1) {
-    for (let xp = 0; xp < 2; xp += 1) {
-      let re = 0;
-      let im = 0;
-      for (let t = 0; t < 2; t += 1) {
-        const i = axis === "subject" ? 2 * x + t : 2 * t + x;
-        const j = axis === "subject" ? 2 * xp + t : 2 * t + xp;
-        re += state[i].re * state[j].re + state[i].im * state[j].im;
-        im += state[i].im * state[j].re - state[i].re * state[j].im;
-      }
-      rho[x][xp] = complex(re, im);
+  for (let i = 0; i < 8; i += 1) {
+    for (let j = 0; j < 8; j += 1) {
+      if ((i & ~mask) !== (j & ~mask)) continue;
+      const x = bitOf(i, q);
+      const y = bitOf(j, q);
+      const re = state[i].re * state[j].re + state[i].im * state[j].im;
+      const im = state[i].im * state[j].re - state[i].re * state[j].im;
+      rho[x][y] = complex(rho[x][y].re + re, rho[x][y].im + im);
     }
   }
   return rho;
 }
 
-export function densityPurity(rho) {
-  let sum = 0;
-  for (let x = 0; x < 2; x += 1) {
-    for (let y = 0; y < 2; y += 1) sum += abs2(rho[x][y]);
-  }
-  return sum;
+export function oneTangle(rho) {
+  const det = sub(mul(rho[0][0], rho[1][1]), mul(rho[0][1], rho[1][0]));
+  return Math.max(0, 4 * det.re);
 }
 
-export function entanglementEntropyFromConcurrence(c) {
-  const g = Math.sqrt(Math.max(0, 1 - c * c));
-  const h = (l) => (l <= 1e-15 ? 0 : -l * Math.log2(l));
-  return h((1 + g) / 2) + h((1 - g) / 2);
+export function threeTangle(state) {
+  const p = (q1, q2, q3) => state[4 * q1 + 2 * q2 + q3];
+  const sq = (x) => mul(x, x);
+  const addc = (x, y) => complex(x.re + y.re, x.im + y.im);
+  const D1_TERMS = [[[0,0,0],[1,1,1]], [[0,0,1],[1,1,0]], [[0,1,0],[1,0,1]], [[1,0,0],[0,1,1]]];
+  const D2_TERMS = [
+    [[0,0,0],[1,1,1],[0,1,1],[1,0,0]],
+    [[0,0,0],[1,1,1],[1,0,1],[0,1,0]],
+    [[0,0,0],[1,1,1],[1,1,0],[0,0,1]],
+    [[0,1,1],[1,0,0],[1,0,1],[0,1,0]],
+    [[0,1,1],[1,0,0],[1,1,0],[0,0,1]],
+    [[1,0,1],[0,1,0],[1,1,0],[0,0,1]],
+  ];
+  const D3_TERMS = [
+    [[0,0,0],[1,1,0],[1,0,1],[0,1,1]],
+    [[1,1,1],[0,0,1],[0,1,0],[1,0,0]],
+  ];
+  let d1 = complex();
+  for (const [A, B] of D1_TERMS) d1 = addc(d1, mul(sq(p(...A)), sq(p(...B))));
+  let d2 = complex();
+  for (const [A, B, X, Y] of D2_TERMS) d2 = addc(d2, mul(mul(p(...A), p(...B)), mul(p(...X), p(...Y))));
+  let d3 = complex();
+  for (const [A, B, X, Y] of D3_TERMS) d3 = addc(d3, mul(mul(p(...A), p(...B)), mul(p(...X), p(...Y))));
+  const h = addc(sub(d1, mul(complex(2, 0), d2)), mul(complex(4, 0), d3));
+  return 4 * Math.sqrt(abs2(h));
 }
 
-export function blochZ(rho) {
-  return rho[0][0].re - rho[1][1].re;
-}
-
-export function entanglementLevel(c) {
-  if (c < 0.1) return "SEPARABLE_LIKE";
-  if (c < 0.5) return "WEAKLY_ENTANGLED";
-  if (c < 0.9) return "STRONGLY_ENTANGLED";
-  return "NEAR_MAXIMAL";
-}
-
-export function analyzeEntanglement(state) {
-  const c = concurrence(state);
-  const rhoSubject = reducedDensityMatrix(state, "subject");
-  const rhoManifestation = reducedDensityMatrix(state, "manifestation");
+export function analyzeEntanglement3(state) {
+  const tSubject = oneTangle(reducedDensity1of3(state, 0));
+  const tManifestation = oneTangle(reducedDensity1of3(state, 1));
+  const tTime = oneTangle(reducedDensity1of3(state, 2));
+  const tau = threeTangle(state);
+  const pairwise = {
+    subject_manifestation: Math.max(0, (tSubject + tManifestation - tTime - tau) / 2),
+    subject_time: Math.max(0, (tSubject + tTime - tManifestation - tau) / 2),
+    manifestation_time: Math.max(0, (tManifestation + tTime - tSubject - tau) / 2),
+  };
+  const pairTotal = pairwise.subject_manifestation + pairwise.subject_time + pairwise.manifestation_time;
+  const total = tau + pairTotal;
+  let structureLabel;
+  if (total < 0.1) structureLabel = "SEPARABLE_LIKE";
+  else if (tau / total >= 0.66) structureLabel = "GHZ_KNOT";
+  else if (tau / total <= 0.33) structureLabel = "W_WEAVE";
+  else structureLabel = "HYBRID";
+  const blochZ = (q) => {
+    const rho = reducedDensity1of3(state, q);
+    return rho[0][0].re - rho[1][1].re;
+  };
   return {
-    concurrence: c,
-    tangle: c * c,
-    entanglement_level: entanglementLevel(c),
-    entanglement_entropy_bits: entanglementEntropyFromConcurrence(c),
-    purity: {
-      subject_axis: densityPurity(rhoSubject),
-      manifestation_axis: densityPurity(rhoManifestation),
-    },
-    bloch_z: {
-      subject_axis: blochZ(rhoSubject),
-      manifestation_axis: blochZ(rhoManifestation),
-    },
-    axis_populations: {
-      individual: rhoSubject[0][0].re,
-      transcendent: rhoSubject[1][1].re,
-      unmanifest: rhoManifestation[0][0].re,
-      manifest: rhoManifestation[1][1].re,
-    },
+    one_tangles: { subject: tSubject, manifestation: tManifestation, time: tTime },
+    three_tangle: tau,
+    pairwise_tangles: pairwise,
+    structure_label: structureLabel,
+    bloch_z: { subject: blochZ(0), manifestation: blochZ(1), time: blochZ(2) },
+    bloch_z_note: "各軸とも 正=前者寄り(当事/潜在/過去)、負=後者寄り(世界/顕在/未来)",
+  };
+}
+
+function axisPopulations(values) {
+  const sum = (labels) => labels.reduce((total, label) => total + values[label], 0);
+  return {
+    subject_side: sum(["a0", "a1", "b0", "b1"]),
+    world_side: sum(["c0", "c1", "d0", "d1"]),
+    latent_side: sum(["a0", "a1", "c0", "c1"]),
+    manifest_side: sum(["b0", "b1", "d0", "d1"]),
+    past_side: sum(["a0", "b0", "c0", "d0"]),
+    future_side: sum(["a1", "b1", "c1", "d1"]),
+  };
+}
+
+function projected2bit(values) {
+  const projected = Object.fromEntries(["a", "b", "c", "d"].map((label) => [label, values[`${label}0`] + values[`${label}1`]]));
+  return {
+    probabilities: projected,
+    ranking: Object.entries(projected).sort((left, right) => right[1] - left[1]).map(([label]) => label),
+    note: "時間軸を周辺化した2ビット視点。",
   };
 }
 
 export function runClassicalMarkov(config) {
-  const p = [0, 0, 0, 0];
+  const p = Array(BASIS.length).fill(0);
   p[basisIndex(config.initial)] = 1;
   for (const gate of config.gates) {
     const i = basisIndex(gate.source);
@@ -485,14 +535,16 @@ export function runFullMeasurement(config) {
     ? rankingMatchesExpected(rankingFromCounts, expectedRanking)
     : null;
   const componentPhases = phases(finalState);
-  const entanglement = analyzeEntanglement(finalState);
+  const entanglement3 = analyzeEntanglement3(finalState);
+  entanglement3.axis_populations = axisPopulations(finalProbabilities);
+  const projected = projected2bit(finalProbabilities);
   const classicalControls = runClassicalControls(config, finalProbabilities);
   const profile = config.mode_profile === "seeker" ? "seeker" : "general";
   const result = {
-    schema_version: "1.4",
+    schema_version: "3q-1.0",
     name: config.name ?? "unnamed",
     description: config.description ?? "",
-    mode_profile: config.mode_profile ?? "legacy",
+    mode_profile: profile,
     source_text_summary: summarizeSourceText(config.source_text),
     mode: config.mode ?? "process",
     initial: config.initial,
@@ -501,10 +553,12 @@ export function runFullMeasurement(config) {
       profile,
       subject_axis: AXIS_LABELS[profile].subject_axis,
       manifestation_axis: AXIS_LABELS[profile].manifestation_axis,
+      time_axis: AXIS_LABELS[profile].time_axis,
       component_labels: AXIS_LABELS[profile].components,
-      bit_mapping: "index = 2*q1 + q2; a=00, b=01, c=10, d=11",
+      bit_mapping: "index = 4*q1 + 2*q2 + q3",
     },
-    entanglement,
+    entanglement3,
+    projected_2bit: projected,
     classical_controls: classicalControls,
     expected_ranking: expectedRanking,
     observed_ranking: ranking,
@@ -513,6 +567,7 @@ export function runFullMeasurement(config) {
     observed_ranking_from_counts: rankingFromCounts,
     ranking_match_expected_from_probabilities: expectedMatch,
     ranking_match_expected_from_counts: expectedMatchFromCounts,
+    ranking_match_top3: top3SetMatches(ranking, expectedRanking),
     probability_source: "statevector",
     count_source: "seeded_sampling",
     probabilities: finalProbabilities,
@@ -554,7 +609,7 @@ export function runFullMeasurement(config) {
   const auditAblation = runGateAblation(config);
   const gateResonance = computeGateResonance(auditGateTrace, auditAblation, result.gates_summary);
   const audit = {
-    schema_version: "1.4",
+    schema_version: "3q-1.0",
     measurement: result,
     gate_trace: auditGateTrace,
     ablation: auditAblation,
