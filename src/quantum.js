@@ -284,13 +284,14 @@ export function makeAiInterpretationJson(result, audit = {}) {
     order_sensitivity: Array.isArray(audit.order_sensitivity) ? audit.order_sensitivity : null,
     phase_sensitivity: Array.isArray(audit.phase_sensitivity) ? audit.phase_sensitivity : null,
     gate_resonance: Array.isArray(audit.gate_resonance) ? audit.gate_resonance : null,
+    gate_flow: Array.isArray(audit.gate_flow) ? audit.gate_flow : null,
   };
   const sectionsPresent = Object.fromEntries(
     Object.entries(diagnosticSections).map(([key, value]) => [key, value !== null]),
   );
   return {
     input_type: "measurement_result",
-    schema_version: "ai_interpretation_3q_v1",
+    schema_version: "ai_interpretation_3q_v2",
     name: result.name,
     description: result.description,
     mode_profile: result.mode_profile,
@@ -300,6 +301,8 @@ export function makeAiInterpretationJson(result, audit = {}) {
     expected_reading_full: result.expected_reading_full,
     gates_summary: result.gates_summary,
     gate_resonance: Array.isArray(audit.gate_resonance) ? audit.gate_resonance : null,
+    gate_flow: Array.isArray(audit.gate_flow) ? audit.gate_flow : null,
+    encoding_health: audit.encoding_health ?? null,
     tensor_structure: result.tensor_structure,
     entanglement3: result.entanglement3,
     projected_2bit: result.projected_2bit,
@@ -330,6 +333,7 @@ export function makeAiInterpretationJson(result, audit = {}) {
       "phase_dependence と interference_gap が両方 LOW の場合、『この物語の量子的構造(位相・干渉)は結果に寄与していない』と明示的に述べること。",
       "gate_resonance の resonance_label と resonance_ratio はサイトが計算した値である。AIが即時効果と反実仮想重みから独自にラベルを再判定しない。",
       "gates_summary の meaning と phi_label はエンコーダとサイトが付与した意味情報である。存在しないゲートや意味を創作しない。",
+      "gate_flow の flag と encoding_health はサイトの判定である。NO_OP / SOURCE_EMPTY のゲートの meaning を根拠に構造的主張を組み立てない。",
     ],
     safety_notice: "この結果は霊的真実・医学的事実・人生診断を証明するものではなく、象徴回路の出力を自己理解のために読むものです。",
   };
@@ -518,6 +522,31 @@ export function computeGateResonance(gateTrace, ablation, gatesSummary) {
   });
 }
 
+export function computeGateFlow(gateTrace, gatesSummary) {
+  return gateTrace.map((step, index) => {
+    const srcBefore = step.before[step.source];
+    const tgtBefore = step.before[step.target];
+    const immediate = Object.values(step.delta).reduce((sum, value) => sum + Math.abs(value), 0);
+    let flag = "NORMAL";
+    if (immediate < 1e-9) flag = "NO_OP";
+    else if (srcBefore < 1e-6 && tgtBefore > 1e-6) flag = "SOURCE_EMPTY";
+    return {
+      gate: step.gate,
+      meaning: gatesSummary[index]?.meaning ?? "",
+      source_population_before: srcBefore,
+      target_population_before: tgtBefore,
+      flag,
+    };
+  });
+}
+
+export function encodingHealth(gateFlow) {
+  const issues = gateFlow.filter((gate) => gate.flag !== "NORMAL").length;
+  if (issues === 0) return "HEALTHY";
+  if (issues <= 2) return "DEGRADED";
+  return "COMPROMISED";
+}
+
 export function runFullMeasurement(config) {
   validateConfig(config);
   const start = initialState(config.initial);
@@ -541,7 +570,7 @@ export function runFullMeasurement(config) {
   const classicalControls = runClassicalControls(config, finalProbabilities);
   const profile = config.mode_profile === "seeker" ? "seeker" : "general";
   const result = {
-    schema_version: "3q-1.0",
+    schema_version: "3q-1.1",
     name: config.name ?? "unnamed",
     description: config.description ?? "",
     mode_profile: profile,
@@ -608,12 +637,15 @@ export function runFullMeasurement(config) {
   const auditGateTrace = traceGateEffects(start, config.gates);
   const auditAblation = runGateAblation(config);
   const gateResonance = computeGateResonance(auditGateTrace, auditAblation, result.gates_summary);
+  const gateFlow = computeGateFlow(auditGateTrace, result.gates_summary);
   const audit = {
-    schema_version: "3q-1.0",
+    schema_version: "3q-1.1",
     measurement: result,
     gate_trace: auditGateTrace,
     ablation: auditAblation,
     gate_resonance: gateResonance,
+    gate_flow: gateFlow,
+    encoding_health: encodingHealth(gateFlow),
     order_sensitivity: runOrderSensitivity(config),
     phase_sensitivity: runPhaseSensitivity(config),
     notice: "This is a mathematical expansion of a symbolic circuit configuration, not proof of spiritual truth, medical fact, or an absolute life diagnosis.",
