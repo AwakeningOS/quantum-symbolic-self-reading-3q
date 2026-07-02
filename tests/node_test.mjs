@@ -131,6 +131,7 @@ for (const prompt of [GENERAL_ENCODER_PROMPT, SEEKER_ENCODER_PROMPT]) {
   assert.ok(prompt.includes("流れの掟"), "flow rule");
   assert.ok(prompt.includes("位相の掟"), "phase rule");
   assert.ok(prompt.includes("flow_check"), "flow check");
+  assert.ok(prompt.includes("無自覚に選ばないこと"), "orthogonal merge caution");
 }
 assert.ok(GENERAL_ENCODER_PROMPT.includes("淵源"));
 assert.ok(GENERAL_ENCODER_PROMPT.includes("予兆"));
@@ -141,6 +142,9 @@ assert.ok(interpretationPrompt.includes("三つの問いの結び方"));
 assert.ok(interpretationPrompt.includes("NO_OP"));
 assert.ok(interpretationPrompt.includes("エンコードの構造上の産物"));
 assert.ok(interpretationPrompt.includes("0.66 以上の場合のみ"));
+assert.ok(interpretationPrompt.includes("内部記号を本文に書かない"), "S1a");
+assert.ok(interpretationPrompt.includes("上位3つは b0、d0、a1 です"), "S1b 悪い例の掲載");
+assert.ok(interpretationPrompt.includes("0.3 以上であり、かつ残り2つの対がいずれも 0.1 未満"), "S2");
 assert.ok(interpretationPrompt.includes("【ここにサイトの result JSON / audit JSON / AI解釈専用JSON を貼る】"));
 
 // 11. private/bundled examples are not exposed in UI/README/src/tests
