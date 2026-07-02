@@ -228,6 +228,16 @@ assert.ok(SEEKER_ENCODER_PROMPT.includes("life_question"), "P5a seeker");
 assert.ok(GENERAL_ENCODER_PROMPT.includes("life_question"), "P5b general");
 assert.ok(SEEKER_ENCODER_PROMPT.includes("同じ strength を付けないでください"), "P5c strength要件");
 
+// UI: 物語入力からモード別エンコーダプロンプトを一括コピーできる
+const indexSource = await readFile(new URL("../index.html", import.meta.url), "utf8");
+const uiSource = await readFile(new URL("../src/ui.js", import.meta.url), "utf8");
+assert.ok(indexSource.indexOf('id="story-entry"') > indexSource.indexOf('id="how-to"'), "UI1 物語入力は3ステップの後");
+assert.ok(indexSource.indexOf('id="story-entry"') < indexSource.indexOf('id="encoding"'), "UI2 物語入力はプロンプト章の前");
+assert.match(indexSource, /id="story-input"/, "UI3 物語入力欄");
+assert.match(indexSource, /id="copy-encoder-with-story"/, "UI4 一括コピーボタン");
+assert.match(uiSource, /ENCODER_STORY_PLACEHOLDERS/, "UI5 モード別プレースホルダ");
+assert.match(uiSource, /encoderPromptWithStory\(selectedMode, story\)/, "UI6 入力内容をプロンプトへ統合");
+
 console.log("All tests passed.");
 console.log(JSON.stringify({
   general: {

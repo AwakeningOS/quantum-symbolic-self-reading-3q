@@ -5,6 +5,9 @@ const input = document.querySelector("#config-input");
 const errorBox = document.querySelector("#error-message");
 const resultSection = document.querySelector("#results");
 const output = document.querySelector("#result-content");
+const storyInput = document.querySelector("#story-input");
+const storyCopyButton = document.querySelector("#copy-encoder-with-story");
+const storyCopyStatus = document.querySelector("#story-copy-status");
 let latest = null;
 let selectedMode = "general";
 
@@ -12,6 +15,11 @@ const MODE_LABELS = {
   general: "非スピリチュアル・人生・恋愛モード",
   seeker: "スピリチュアル・霊的体験・求道者モード",
   legacy: "旧形式（mode_profile 未指定）",
+};
+
+const ENCODER_STORY_PLACEHOLDERS = {
+  general: "【ここにユーザーの人生・思想・体験・物語を書く】",
+  seeker: "【ここにユーザーの人生・思想・体験を書く】",
 };
 
 function element(tag, className, text) {
@@ -63,6 +71,7 @@ function updateModeUi(mode) {
   const prompt = getEncoderPrompt(selectedMode);
   document.querySelector("#encoding-prompt").textContent = prompt;
   document.querySelector("#encoder-copy-button").textContent = `${modeLabel(selectedMode)}のAI変換プロンプトをコピー`;
+  storyCopyButton.textContent = `${modeLabel(selectedMode)}のAI変換プロンプト+記入内容をコピー`;
   const radio = document.querySelector(`input[name="mode-profile"][value="${selectedMode}"]`);
   if (radio) radio.checked = true;
 }
@@ -241,6 +250,12 @@ async function copyText(text, button) {
   }
 }
 
+function encoderPromptWithStory(mode, story) {
+  const prompt = getEncoderPrompt(mode);
+  const placeholder = ENCODER_STORY_PLACEHOLDERS[mode];
+  return prompt.includes(placeholder) ? prompt.replace(placeholder, story) : `${prompt}\n\n${story}`;
+}
+
 function downloadJson(data, filename) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -256,6 +271,17 @@ document.querySelector("#interpretation-prompt").textContent = interpretationPro
 
 document.querySelectorAll('input[name="mode-profile"]').forEach((radio) => {
   radio.addEventListener("change", (event) => updateModeUi(event.currentTarget.value));
+});
+
+storyCopyButton.addEventListener("click", () => {
+  const story = storyInput.value.trim();
+  if (!story) {
+    storyCopyStatus.textContent = "分析したい内容を入力してください。";
+    storyInput.focus();
+    return;
+  }
+  storyCopyStatus.textContent = "";
+  copyText(encoderPromptWithStory(selectedMode, story), storyCopyButton);
 });
 
 document.querySelector("#measure-button").addEventListener("click", () => {

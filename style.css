@@ -87,6 +87,7 @@ summary { padding: 18px 22px; font-weight: 700; cursor: pointer; }
 .prompt { max-height: 560px; margin: 0; padding: 25px; border-top: 1px solid var(--line); overflow: auto; color: #ced7f5; background: #0a0f1e; white-space: pre-wrap; word-break: break-word; font: .86rem/1.75 ui-monospace, SFMono-Regular, Consolas, monospace; }
 textarea { display: block; width: 100%; min-height: 420px; padding: 22px; resize: vertical; border: 1px solid rgba(169,140,255,.32); border-radius: var(--radius); color: #eaf0ff; background: #080d1a; font: .9rem/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; }
 textarea::placeholder { color: #707997; }
+.story-input { min-height: 260px; font-family: inherit; font-size: 1rem; line-height: 1.75; }
 .technical-note { margin-top: 28px; padding: 20px 24px; border-left: 2px solid var(--violet); background: rgba(169,140,255,.07); color: var(--muted); }
 .technical-note strong { color: var(--ink); }
 .technical-note p { margin: 4px 0 0; }
