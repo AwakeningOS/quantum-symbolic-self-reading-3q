@@ -206,19 +206,28 @@ assert.ok(m.aiInterpretation.gates_summary, "P2g aiInterpretationへ伝搬");
 assert.ok(m.aiInterpretation.gate_resonance, "P2h gate_resonance伝搬");
 assert.equal(m.aiInterpretation.sections_present.gate_resonance, true, "P2i sections_present更新");
 
-// T-P3: 共鳴診断のゴールデンラベル (seekerサンプル、リファレンス実装で検証済み)
-// index 2 = G_bd_suffering_seeks_salvation: 即時0.452 / 反実仮想0.270 → ratio≈0.60 → WASHED_OUT
-// index 4 = G_cd_light_reveals_wisdom:      即時0.086 / 反実仮想0.305 → ratio≈3.55 → QUIET_SEED
-// index 5 = G_ab_return_to_embodied_life:   即時0.266 / 反実仮想0.862 → ratio≈3.24 → QUIET_SEED
+// T-P3v2: 共鳴診断 (v1.2基準) — seekerサンプル
 const gr = m.audit.gate_resonance;
-assert.equal(gr[2].resonance_label, "WASHED_OUT", `P3a: ${JSON.stringify(gr[2])}`);
-assert.equal(gr[4].resonance_label, "QUIET_SEED", `P3b: ${JSON.stringify(gr[4])}`);
-assert.equal(gr[5].resonance_label, "QUIET_SEED", `P3c: ${JSON.stringify(gr[5])}`);
-for (const entry of gr) {
-  if (entry.resonance_ratio !== null) {
-    assert.ok(Math.abs(entry.resonance_ratio - entry.counterfactual_weight / entry.immediate_effect) < 1e-12, "P3d ratio整合");
-  }
-}
+const expectLabels = ["WASHED_OUT", "PROPORTIONATE", "WASHED_OUT", "PROPORTIONATE", "QUIET_SEED", "AMPLIFIED", "PROPORTIONATE"];
+expectLabels.forEach((label, i) => assert.equal(gr[i].resonance_label, label, `P3v2-${i}: ${JSON.stringify(gr[i])}`));
+const expectRatios = [0.490653, 0.893946, 0.298304, 0.904508, 1.768050, 1.622106, 1.000000];
+expectRatios.forEach((r, i) => assert.ok(Math.abs(gr[i].resonance_ratio - r) < 1e-6, `P3v2-ratio-${i}: ${gr[i].resonance_ratio}`));
+
+// T-P3v3: 縮退基準値の検証 — 単一ゲート回路では ratio は厳密に 1
+const single = runFullMeasurement({
+  initial: "a", shots: 100, seed: 1,
+  gates: [{ name: "g", source: "a", target: "b", theta: 0.7, phi: 0.3, strength: 2 }],
+});
+assert.ok(Math.abs(single.audit.gate_resonance[0].resonance_ratio - 1) < 1e-12, "P3v3 基準値=1");
+
+// T-P3v4: 小さい反実仮想重みは高ratioでもMINORを優先
+const minor = computeGateResonance(
+  [{ gate: "minor", delta: { a: -0.02, b: 0.02, c: 0, d: 0 } }],
+  [{ l1_difference: 0.12 }],
+  [{ meaning: "小さい出来事" }],
+)[0];
+assert.equal(minor.resonance_label, "MINOR", `P3v4 MINOR優先: ${JSON.stringify(minor)}`);
+assert.ok(Math.abs(minor.resonance_ratio - 3) < 1e-12, "P3v4 ratio自体は保持");
 
 // T-P4: プレースホルダ保全(ui.jsのreplaceが壊れないこと)
 assert.ok(interpretationPrompt.includes("【ここにサイトの result JSON / audit JSON / AI解釈専用JSON を貼る】"), "P4 プレースホルダ存在");
@@ -227,6 +236,14 @@ assert.ok(interpretationPrompt.includes("【ここにサイトの result JSON / 
 assert.ok(SEEKER_ENCODER_PROMPT.includes("life_question"), "P5a seeker");
 assert.ok(GENERAL_ENCODER_PROMPT.includes("life_question"), "P5b general");
 assert.ok(SEEKER_ENCODER_PROMPT.includes("同じ strength を付けないでください"), "P5c strength要件");
+
+// T-P6: v1.2解釈規律
+assert.match(interpretationPrompt, /基準値は1で、1より大きいほど/, "P6a resonance基準値");
+assert.match(interpretationPrompt, /MINOR \/ NEGLIGIBLE \/ PROPORTIONATE のゲートはこのセクションで言及しない/, "P6b ラベル希釈防止");
+assert.match(interpretationPrompt, /HIGH がなく MEDIUM がある場合: 順序は結末の大枠を変えてはいない/, "P6c 順序MEDIUM分岐");
+assert.match(interpretationPrompt, /あなたが実際に選んだ通り方\(位相\)は/, "P6d 位相LOW精密化");
+assert.match(interpretationPrompt, /phase が LOW で interference が MEDIUM\/HIGH/, "P6e 古典対照混在分岐");
+assert.match(interpretationPrompt, /二人称\(「あなた」\)で一貫して/, "P6f 二人称規律");
 
 // UI: 物語入力からモード別エンコーダプロンプトを一括コピーできる
 const indexSource = await readFile(new URL("../index.html", import.meta.url), "utf8");

@@ -430,17 +430,18 @@ export function phiLabel(phi) {
 
 export function computeGateResonance(gateTrace, ablation, gatesSummary) {
   return gateTrace.map((step, index) => {
-    const immediate = Math.max(...Object.values(step.delta).map(Math.abs));
+    const immediate = Object.values(step.delta).reduce((s, v) => s + Math.abs(v), 0);
     const weight = ablation[index].l1_difference;
     let ratio = null;
     let label;
-    if (immediate < 0.01) {
+    if (immediate < 0.02) {
       label = weight >= 0.1 ? "DORMANT_BUT_STRUCTURAL" : "NEGLIGIBLE";
     } else {
       ratio = weight / immediate;
-      if (ratio >= 2 && immediate < 0.3) label = "QUIET_SEED";
-      else if (ratio >= 2) label = "AMPLIFIED";
-      else if (ratio <= 0.7) label = "WASHED_OUT";
+      if (weight < 0.15) label = "MINOR";
+      else if (ratio >= 1.5 && immediate < 0.4) label = "QUIET_SEED";
+      else if (ratio >= 1.5) label = "AMPLIFIED";
+      else if (ratio <= 0.6 && immediate >= 0.2) label = "WASHED_OUT";
       else label = "PROPORTIONATE";
     }
     return {
