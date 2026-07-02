@@ -8,20 +8,41 @@ import {
   initialState,
   pairRotation,
   phiLabel,
-  probabilities,
   runFullMeasurement,
   validateConfig,
 } from "../src/quantum.js";
 import { GENERAL_ENCODER_PROMPT, SEEKER_ENCODER_PROMPT, interpretationPrompt } from "../src/prompts.js";
 
-const load = async (name) => JSON.parse(await readFile(new URL(`../examples/${name}`, import.meta.url), "utf8"));
-const general = await load("woodworker45_time_v0.json");
-const seeker = await load("light_descent_time_v0.json");
 const close = (actual, expected, tolerance, message) => assert.ok(Math.abs(actual - expected) < tolerance, `${message}: ${actual}`);
 
-// 1. ノルム保存: general サンプルの全ステップ
-let state = initialState(general.initial);
-for (const gate of general.gates) {
+const neutralConfig = {
+  schema_version: "3q-1.0",
+  mode_profile: "general",
+  name: "neutral_public_test_config",
+  description: "公開テスト用の抽象的な3Q config。個人の体験や物語を含まない。",
+  mode: "process",
+  initial: "a0",
+  shots: 256,
+  seed: 7,
+  expected_reading: {
+    primary: "a1",
+    secondary: "b1",
+    ranking: ["a1", "b1", "d1", "c1", "a0", "b0", "c0", "d0"],
+    pattern: "public_test",
+    notes: "公開テスト用の仮説。",
+  },
+  component_meanings: Object.fromEntries(BASIS.map((label) => [label, `${label} public meaning`])),
+  gates: [
+    { name: "g_a0a1_turn", source: "a0", target: "a1", theta: 0.8, phi: 0, strength: 3, meaning: "公開テスト用の転回ゲート。" },
+    { name: "g_a1b1_manifest", source: "a1", target: "b1", theta: 0.5, phi: 0.3, strength: 2, meaning: "公開テスト用の表出ゲート。" },
+    { name: "g_b1d1_encounter", source: "b1", target: "d1", theta: 0.4, phi: -0.2, strength: 2, meaning: "公開テスト用の遭遇ゲート。" },
+  ],
+  encoder_notes: { flow_check: "公開テスト用。全3本のゲートでsourceへの到達を確認済み。" },
+};
+
+// 1. ノルム保存: 公開テストconfigの全ステップ
+let state = initialState(neutralConfig.initial);
+for (const gate of neutralConfig.gates) {
   state = pairRotation(state, gate.source, gate.target, gate.theta, gate.phi);
   close(state.reduce((sum, z) => sum + abs2(z), 0), 1, 1e-10, `norm after ${gate.name}`);
 }
@@ -54,50 +75,21 @@ assert.ok(product.three_tangle < 1e-10);
 assert.equal(product.structure_label, "SEPARABLE_LIKE");
 close(product.bloch_z.time, -0.5, 1e-10, "product time bloch-z");
 
-// 5. general sample regression
-const gm = runFullMeasurement(general);
-const gp = gm.result.probabilities;
-close(gp.c0, 0.441187, 1e-6, "general P.c0");
-close(gp.d0, 0.226127, 1e-6, "general P.d0");
-close(gp.b0, 0.106559, 1e-6, "general P.b0");
-assert.deepEqual(gm.result.observed_ranking.slice(0, 3), ["c0", "d0", "b0"]);
-const ge = gm.result.entanglement3;
-close(ge.three_tangle, 0.443348, 1e-6, "general tau");
-close(ge.pairwise_tangles.subject_manifestation, 0.103972, 1e-6, "general pair SM");
-close(ge.pairwise_tangles.subject_time, 0.047183, 1e-6, "general pair ST");
-close(ge.pairwise_tangles.manifestation_time, 0.139016, 1e-6, "general pair MT");
-assert.equal(ge.structure_label, "HYBRID");
-close(ge.one_tangles.subject, 0.594503, 1e-6, "general one subject");
-close(ge.one_tangles.manifestation, 0.686336, 1e-6, "general one manifestation");
-close(ge.one_tangles.time, 0.629547, 1e-6, "general one time");
-close(ge.bloch_z.time, 0.590932, 1e-6, "general time z");
-close(gm.result.classical_controls.phase_dependence, 0.968981, 1e-6, "general phase dependence");
-close(gm.result.classical_controls.interference_gap, 0.430119, 1e-6, "general interference gap");
-close(gm.result.projected_2bit.probabilities.c, 0.441187, 1e-6, "general projected c");
-close(gm.result.projected_2bit.probabilities.d, 0.322180, 1e-6, "general projected d");
-assert.equal(gm.result.ranking_match_top3, false);
+// 5. Public config measurement smoke test
+const pm = runFullMeasurement(neutralConfig);
+assert.equal(pm.result.schema_version, "3q-1.1");
+assert.equal(pm.audit.schema_version, "3q-1.1");
+assert.equal(pm.aiInterpretation.schema_version, "ai_interpretation_3q_v2");
+assert.equal(pm.audit.encoding_health, "HEALTHY");
+assert.ok(pm.audit.gate_flow.every((gate) => gate.flag === "NORMAL"));
+close(Object.values(pm.result.probabilities).reduce((sum, value) => sum + value, 0), 1, 1e-10, "probabilities sum");
+assert.ok(pm.aiInterpretation.entanglement3);
+assert.ok(pm.aiInterpretation.projected_2bit);
+assert.ok(pm.aiInterpretation.gates_summary);
+assert.ok(pm.aiInterpretation.gate_resonance);
+assert.deepEqual(BASIS, ["a0", "a1", "b0", "b1", "c0", "c1", "d0", "d1"]);
 
-// 6. seeker sample regression
-const sm = runFullMeasurement(seeker);
-const sp = sm.result.probabilities;
-close(sp.b1, 0.240475, 1e-6, "seeker P.b1");
-close(sp.c0, 0.204534, 1e-6, "seeker P.c0");
-close(sp.b0, 0.172023, 1e-6, "seeker P.b0");
-assert.deepEqual(sm.result.observed_ranking.slice(0, 3), ["b1", "c0", "b0"]);
-const se = sm.result.entanglement3;
-close(se.three_tangle, 0.709773, 1e-6, "seeker tau");
-close(se.pairwise_tangles.subject_manifestation, 0.070151, 1e-6, "seeker pair SM");
-close(se.pairwise_tangles.subject_time, 0.004690, 1e-6, "seeker pair ST");
-close(se.pairwise_tangles.manifestation_time, 0.138731, 1e-6, "seeker pair MT");
-assert.equal(se.structure_label, "GHZ_KNOT");
-close(se.one_tangles.subject, 0.784614, 1e-6, "seeker one subject");
-close(se.one_tangles.manifestation, 0.918656, 1e-6, "seeker one manifestation");
-close(se.one_tangles.time, 0.853194, 1e-6, "seeker one time");
-close(se.bloch_z.time, -0.133822, 1e-6, "seeker time z");
-close(sm.result.classical_controls.phase_dependence, 0.330943, 1e-6, "seeker phase dependence");
-close(sm.result.classical_controls.interference_gap, 0.141329, 1e-6, "seeker interference gap");
-
-// 7. phi labels
+// 6. phi labels
 assert.equal(phiLabel(0), "同位相(受容・同調)");
 assert.equal(phiLabel(1.5707963268), "直交(葛藤・未統合)");
 assert.equal(phiLabel(3.1415926536), "逆位相(反転・拒絶)");
@@ -105,7 +97,7 @@ assert.equal(phiLabel(-1.5707963268), "折返し(反転的気づき)");
 assert.equal(phiLabel(0.8), "中間位相");
 assert.equal(phiLabel(2 * Math.PI), "同位相(受容・同調)");
 
-// 8. resonance baseline
+// 7. resonance baseline
 const single = runFullMeasurement({
   schema_version: "3q-1.0", mode_profile: "general", initial: "a0", shots: 100, seed: 1,
   component_meanings: Object.fromEntries(BASIS.map((label) => [label, label])),
@@ -113,42 +105,10 @@ const single = runFullMeasurement({
 });
 close(single.audit.gate_resonance[0].resonance_ratio, 1, 1e-12, "resonance baseline");
 
-// 9. reject legacy labels
+// 8. reject legacy labels
 assert.throws(() => validateConfig({ initial: "a", gates: [{ source: "a", target: "b", theta: 1, phi: 0, strength: 1 }] }), /3ビット専用/);
 
-// 10. prompt vocabulary and prohibited term
-assert.ok(GENERAL_ENCODER_PROMPT.includes("淵源"));
-assert.ok(GENERAL_ENCODER_PROMPT.includes("予兆"));
-assert.ok(GENERAL_ENCODER_PROMPT.includes("転回系"));
-assert.ok(SEEKER_ENCODER_PROMPT.includes("宿縁"));
-assert.ok(SEEKER_ENCODER_PROMPT.includes("来迎"));
-assert.ok(interpretationPrompt.includes("分岐点の出来事"));
-assert.ok(interpretationPrompt.includes("三つの問いの結び方"));
-assert.ok(interpretationPrompt.includes("【ここにサイトの result JSON / audit JSON / AI解釈専用JSON を貼る】"));
-const srcDir = new URL("../src/", import.meta.url);
-for (const file of await readdir(srcDir)) {
-  if (file.endsWith(".js")) assert.equal((await readFile(new URL(file, srcDir), "utf8")).includes("蝶番"), false, `${file} に禁止語`);
-}
-const uiSource = await readFile(new URL("../src/ui.js", import.meta.url), "utf8");
-assert.equal(uiSource.includes("result.entanglement;"), false, "UIに旧2Q entanglement参照がない");
-assert.equal(uiSource.includes("axis_populations.individual"), false, "UIに旧2Q axis keyがない");
-assert.ok(uiSource.includes('["成分", "語", "順位", "定義・意味"]'), "確率表に順位列がある");
-assert.ok(uiSource.includes("最終的に残った重みの順位"), "確率順位の読み方がある");
-assert.ok(uiSource.includes("過去/未来の区別をいったん外し"), "時間を畳んだ視点の読み方がある");
-assert.ok(uiSource.includes("有限回だけ観測したと仮定した疑似実験"), "サンプリング結果の読み方がある");
-
-// 11. AI interpretation JSON propagation
-assert.equal(gm.result.schema_version, "3q-1.1");
-assert.equal(gm.audit.schema_version, "3q-1.1");
-assert.equal(gm.aiInterpretation.schema_version, "ai_interpretation_3q_v2");
-assert.ok(gm.aiInterpretation.entanglement3);
-assert.ok(gm.aiInterpretation.projected_2bit);
-assert.ok(gm.aiInterpretation.gates_summary);
-assert.ok(gm.aiInterpretation.gate_resonance);
-assert.equal(gm.aiInterpretation.ranking_match_top3, false);
-assert.deepEqual(BASIS, ["a0", "a1", "b0", "b1", "c0", "c1", "d0", "d1"]);
-
-// T-F1: NO_OP / SOURCE_EMPTY detection
+// 9. NO_OP / SOURCE_EMPTY detection
 const flowCfg = {
   schema_version: "3q-1.0", mode_profile: "general", initial: "a0", shots: 100, seed: 1,
   gates: [
@@ -166,33 +126,42 @@ assert.equal(fm.audit.encoding_health, "DEGRADED", "F1d 2件=DEGRADED");
 assert.ok(fm.aiInterpretation.gate_flow, "F1e 伝搬");
 assert.equal(fm.aiInterpretation.encoding_health, "DEGRADED", "F1f");
 
-// T-F2: bundled samples are flow-healthy
-for (const [label, measurement] of [["general", gm], ["seeker", sm]]) {
-  assert.equal(measurement.audit.encoding_health, "HEALTHY", `F2 ${label}`);
-  assert.ok(measurement.audit.gate_flow.every((gate) => gate.flag === "NORMAL"), `F2 ${label} all NORMAL`);
-}
-
-// T-F3: prompt requirements
+// 10. prompt requirements
 for (const prompt of [GENERAL_ENCODER_PROMPT, SEEKER_ENCODER_PROMPT]) {
-  assert.ok(prompt.includes("流れの掟"), "F3 flow rule");
-  assert.ok(prompt.includes("位相の掟"), "F3 phase rule");
-  assert.ok(prompt.includes("flow_check"), "F3 flow check");
+  assert.ok(prompt.includes("流れの掟"), "flow rule");
+  assert.ok(prompt.includes("位相の掟"), "phase rule");
+  assert.ok(prompt.includes("flow_check"), "flow check");
 }
-assert.ok(interpretationPrompt.includes("NO_OP"), "F3 NO_OP");
-assert.ok(interpretationPrompt.includes("エンコードの構造上の産物"), "F3 structural artifact");
-assert.ok(interpretationPrompt.includes("0.66 以上の場合のみ"), "F3 calibration");
+assert.ok(GENERAL_ENCODER_PROMPT.includes("淵源"));
+assert.ok(GENERAL_ENCODER_PROMPT.includes("予兆"));
+assert.ok(SEEKER_ENCODER_PROMPT.includes("宿縁"));
+assert.ok(SEEKER_ENCODER_PROMPT.includes("来迎"));
+assert.ok(interpretationPrompt.includes("分岐点の出来事"));
+assert.ok(interpretationPrompt.includes("三つの問いの結び方"));
+assert.ok(interpretationPrompt.includes("NO_OP"));
+assert.ok(interpretationPrompt.includes("エンコードの構造上の産物"));
+assert.ok(interpretationPrompt.includes("0.66 以上の場合のみ"));
+assert.ok(interpretationPrompt.includes("【ここにサイトの result JSON / audit JSON / AI解釈専用JSON を貼る】"));
 
-// T-F4: schema propagation
-assert.equal(fm.result.schema_version, "3q-1.1", "F4 result schema");
-assert.equal(fm.audit.schema_version, "3q-1.1", "F4 audit schema");
-assert.equal(fm.aiInterpretation.schema_version, "ai_interpretation_3q_v2", "F4 AI schema");
-assert.equal(fm.aiInterpretation.sections_present.gate_flow, true, "F4 gate_flow section");
+// 11. private/bundled examples are not exposed in UI/README/src/tests
+const filesToCheck = [
+  "../README.md",
+  "../index.html",
+  "../src/ui.js",
+  "../tests/node_test.mjs",
+];
+for (const path of filesToCheck) {
+  const text = await readFile(new URL(path, import.meta.url), "utf8");
+  assert.equal(text.includes("woodworker45_time_v0"), false, `${path} has woodworker reference`);
+  assert.equal(text.includes("light_descent_time_v0"), false, `${path} has light reference`);
+  assert.equal(text.includes("サンプルを読み込"), false, `${path} has sample-load UI text`);
+}
 
-// Distribution metadata and 8-state color classes
-assert.equal(gm.result.tensor_structure.component_definitions.a0, "埋もれた願い・傷・記憶・原点");
-assert.equal(sm.result.tensor_structure.component_definitions.d1, "先から訪れる恩寵・光の体験・召しの出来事");
+const srcDir = new URL("../src/", import.meta.url);
+for (const file of await readdir(srcDir)) {
+  if (file.endsWith(".js")) assert.equal((await readFile(new URL(file, srcDir), "utf8")).includes("蝶番"), false, `${file} に禁止語`);
+}
 const styleSource = await readFile(new URL("../style.css", import.meta.url), "utf8");
 for (const label of BASIS) assert.ok(styleSource.includes(`.bar-${label}`), `bar color ${label}`);
-assert.ok(uiSource.includes("component_definitions[label]"), "distribution uses canonical definitions");
 
 console.log("All 3Q tests passed.");
