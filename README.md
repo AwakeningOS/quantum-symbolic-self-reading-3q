@@ -354,11 +354,7 @@ node tools/encoder_variance.mjs config1.json config2.json config3.json
 
 ---
 
-## サンプル
-
-- `examples/woodworker45_time_v0.json`: general 3Q サンプル
-- `examples/light_descent_time_v0.json`: seeker 3Q サンプル
-- `examples/legacy_2bit/`: 読み込み対象外の旧2ビット例
+## 旧形式について
 
 旧2ビットラベルを測定すると、次のようなエラーになります。
 
