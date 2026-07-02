@@ -132,6 +132,10 @@ for (const file of await readdir(srcDir)) {
 const uiSource = await readFile(new URL("../src/ui.js", import.meta.url), "utf8");
 assert.equal(uiSource.includes("result.entanglement;"), false, "UIに旧2Q entanglement参照がない");
 assert.equal(uiSource.includes("axis_populations.individual"), false, "UIに旧2Q axis keyがない");
+assert.ok(uiSource.includes('["成分", "語", "順位", "定義・意味"]'), "確率表に順位列がある");
+assert.ok(uiSource.includes("最終的に残った重みの順位"), "確率順位の読み方がある");
+assert.ok(uiSource.includes("過去/未来の区別をいったん外し"), "時間を畳んだ視点の読み方がある");
+assert.ok(uiSource.includes("有限回だけ観測したと仮定した疑似実験"), "サンプリング結果の読み方がある");
 
 // 11. AI interpretation JSON propagation
 assert.equal(gm.result.schema_version, "3q-1.1");
